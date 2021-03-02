@@ -1,0 +1,124 @@
+# --- Header -------------------------------------------------------------------
+# See LICENSE file for details 
+#
+# This code pulls data from WRDS 
+# ------------------------------------------------------------------------------
+
+library(RPostgres)
+library(DBI)
+
+if (!exists("cfg")) source("code/R/read_config.R")
+
+save_wrds_data <- function(df, fname) {
+  if(file.exists(fname)) {
+    file.rename(
+      fname,
+      paste0(
+        substr(fname, 1, nchar(fname) - 4), 
+        "_",
+        format(file.info(fname)$mtime, "%Y-%m-%d_%H_%M_%S"),".rds")
+    )
+  }
+  saveRDS(df, fname)
+}
+
+# --- Connect to WRDS ----------------------------------------------------------
+
+wrds <- dbConnect(
+  Postgres(),
+  host = 'wrds-pgdata.wharton.upenn.edu',
+  port = 9737,
+  user = cfg$wrds_user,
+  password = cfg$wrds_pwd,
+  sslmode = 'require',
+  dbname = 'wrds'
+)
+
+message("Logged on to WRDS ...")
+
+# --- Specify filters and variables --------------------------------------------
+
+dyn_vars <- c(
+  "gvkey", "conm", "cik", "fyear", "datadate", "indfmt", "sich",
+  "consol", "popsrc", "datafmt", "curcd", "curuscn", "fyr", 
+  "act", "ap", "aqc", "aqs", "acqsc", "at", "ceq", "che", "cogs", 
+  "csho", "dlc", "dp", "dpc", "dt", "dvpd", "exchg", "gdwl", "ib", 
+  "ibc", "intan", "invt", "lct", "lt", "ni", "capx", "oancf", 
+  "ivncf", "fincf", "oiadp", "pi", "ppent", "ppegt", "rectr", 
+  "sale", "seq", "txt", "xint", "xsga", "costat", "mkvalt", "prcc_f",
+  "recch", "invch", "apalch", "txach", "aoloch",
+  "gdwlip", "spi", "wdp", "rcp"
+)
+
+dyn_var_str <- paste(dyn_vars, collapse = ", ")
+
+stat_vars <- c("gvkey", "loc", "sic", "spcindcd", "ipodate", "fic")
+stat_var_str <- paste(stat_vars, collapse = ", ")
+
+cs_filter <- "consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='STD' and popsrc='D'"
+ts_filter <- "fyear>1986"
+
+rest_var <- c(
+  "res_notif_key", "company_fkey", "best_edgar_ticker", 
+  "res_accounting", "res_fraud", "res_adverse", 
+  "res_improves", "res_begin_date", "res_begin_date_num", "res_begin_aud_fkey", 
+  "res_begin_aud_name", "res_end_date", "res_end_date_num", "res_end_aud_fkey", 
+  "res_end_aud_name", "res_period_aud_fkey", "res_period_aud_names", 
+  "res_aud_letter", "res_other", "res_cler_err",
+  "res_sec_invest", "res_board_app", "eventdate_aud_fkey", 
+  "eventdate_aud_name"
+)
+
+rest_var_str <- paste(rest_var, collapse = ", ")
+
+
+# --- Pull US data -------------------------------------------------------------
+
+message("Pulling Compustat/CRSP Link table ... ", appendLF = FALSE)
+res <- dbSendQuery(wrds, "select * from crsp_a_ccm.ccmxpf_linktable")
+crsp_a_ccm_link <- dbFetch(res, n=-1)
+dbClearResult(res)
+message("done!")
+save_wrds_data(crsp_a_ccm_link, "data/pulled/crsp_a_ccm_link.rds")
+
+
+message("Pulling dynamic Compustat data ... ", appendLF = FALSE)
+res <- dbSendQuery(wrds, paste(
+  "select", 
+  dyn_var_str, 
+  "from COMP.FUNDA",
+  "where", cs_filter,
+  "and", ts_filter
+))
+
+wrds_us_dynamic <- dbFetch(res, n=-1)
+dbClearResult(res)
+message("done!")
+
+message("Pulling static Compustat data ... ", appendLF = FALSE)
+res2<-dbSendQuery(wrds, paste(
+  "select ", stat_var_str, "from COMP.COMPANY"
+))
+
+wrds_us_static <- dbFetch(res2,n=-1)
+dbClearResult(res2)
+message("done!")
+
+wrds_us <- merge(wrds_us_static, wrds_us_dynamic, by="gvkey")
+save_wrds_data(wrds_us, "data/pulled/cstat_us_sample.rds")
+
+message("Pulling restatement data ... ", appendLF = FALSE)
+res <- dbSendQuery(wrds, paste(
+  "select", 
+  rest_var_str, 
+  "from audit.auditnonreli"
+))
+
+rest_data <- dbFetch(res, n=-1)
+dbClearResult(res)
+message("done!")
+
+save_wrds_data(rest_data, "data/pulled/rest_data.rds")
+
+dbDisconnect(wrds)
+message("Disconnected from WRDS")

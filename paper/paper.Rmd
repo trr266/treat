@@ -1,0 +1,136 @@
+---
+title: |
+  | Exporing Discretionary Accruals: 
+  | A Stub Project^[I acknowledge financial support from Deutsche Forschungsgemeinschaft-Project-ID 403041268 - TRR 266.] \vspace{1cm}
+
+author: |
+  | Joachim Gassen 
+  | TRR 266 \"Accounting for Transparency\"
+  | Humboldt-Universität zu Berlin 
+  | gassen@wiwi.hu-berlin.de
+
+date: |
+  | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %e, %Y'); Sys.setlocale("LC_TIME", loc); fdate` \vspace{1cm}
+  
+abstract: |
+  | The Open Science movement promotes the accessibility and reusability of research. This repository has the objective to help researchers establishing such an collaboration-oriented workflow. It uses a toy project on discretionary accruals for demonstration. 
+  | \vspace{6cm}
+
+bibliography: references.bib
+biblio-style: apsr
+
+output:
+  pdf_document: 
+    number_sections: true
+  toc: no
+fig_caption: yes
+fontsize: 11pt
+ident: yes
+
+always_allow_html: yes
+
+header-includes:
+  - \usepackage[nolists]{endfloat}    
+  - \usepackage{setspace}\doublespacing
+  - \setlength{\parindent}{4em}
+  - \setlength{\parskip}{0em}
+  - \usepackage[hang,flushmargin]{footmisc}
+  - \usepackage{caption} 
+  - \captionsetup[table]{skip=24pt,font=bf}
+  - \usepackage{array}
+  - \usepackage{threeparttable}
+  - \usepackage{csquotes}
+---
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(ExPanDaR)
+library(kableExtra)
+opts_chunk$set(fig.pos = 'p') # Places figures on their own pages
+opts_chunk$set(out.width = '100%', dpi=300)
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE, cache = FALSE)
+```
+
+```{r prepare_data, include=FALSE}
+smp <- readRDS("../data/generated/acc_sample.rds")
+```
+
+\pagebreak
+
+# Introduction
+  
+Several authors have discussed advantages of reproducible and collaboration oriented workflows (@GGR2018) and many scholars across
+fields have voiced the need for increased reproducibility in science 
+(e.g., @I2005, @ACD_2013, @DPR2017).
+
+So here is our repo for it.
+
+
+# Discretionary Accruals
+
+To demonstrate our workflow, we explore discretionary accruals accross the U.S. We calculate modified Jones and Dechow and Dichev type accruals and show their distributional properties. In addition, we demonstrate their association with financial restatements as included in Audit Analytics database. The main purpose of all this, however, is to provide a toy use case for [our project template directory](https://github.com/trr266/project_template) that contains all the code to obtain the data, run the analysis and prepare a paper as well as a presentation.
+
+
+```{r tab_descriptives_sample, results="asis"}
+df <- smp %>% 
+  select(ln_ta, mj_da, dd_da)
+
+t <- prepare_descriptive_table(df)
+
+desc_rnames <- c(
+  "\\textit{Ln(total assets)}", 
+  "\\textit{Modified Jones Disc. Acc.}", 
+  "\\textit{Dechow and Dichev Disc. Acc.}"
+)
+rownames(t$df) <- desc_rnames
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
+kable(t$df, digits = c(0, 1, 1, 1, 1, 1, 1, 1), format = "latex",
+      caption = "\\label{tab:descriptives_sample}Descriptive Statistics",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE),
+      booktabs = TRUE, escape = FALSE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[6] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[8] <- "\\hline\\\\[-1.8ex]"
+lat_tab[length(lat_tab) - 2] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+
+latex_tab <- c(
+  "\\begin{table}[!htbp]",  
+  lat_tab[3],
+  "\\begin{threeparttable}",
+  lat_tab[5:(length(lat_tab) - 1)],
+  "\\begin{tablenotes}[flushleft]",
+  "\\setlength{\\labelsep}{0pt}",
+  "\\footnotetext",
+  sprintf(
+    paste(
+      "\\item Note: The data is obtained from the Compustat U.S. as provided",
+      "by WRDS. The sample covers the period %d to %d and %s unique firms."
+    ),
+    min(smp$fyear), max(smp$fyear), 
+    format(length(unique(smp$gvkey)), big.mark = ",")
+  ),
+  "\\end{tablenotes}",
+  "\\end{threeparttable}",
+  "\\end{table}"
+)
+cat(paste(latex_tab, collapse = "\n"))  
+```
+
+
+# Conclusion
+
+Isn't that wonderful?
+
+\pagebreak
+
+\setcounter{table}{0}
+\renewcommand{\thetable}{\arabic{table}}
+
+# References {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent

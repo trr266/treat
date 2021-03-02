@@ -1,0 +1,21 @@
+# This is a config file, formatted as CSV (comma separated value)
+# Use "" to wrap strings with special characters
+# Lines starting with the hash sign are ignored
+#
+# In projects, you often need to provide user level data for the code
+# to run. Examples are user names and passwords to access external 
+# data or paths to data that are stored outside of the project's
+# directory. You need to inform the users what they are supposed to
+# configurate here. A good place to do this is in the README.
+#
+# Here, we need the user to provide their WRDS access data as our toy
+# project used WRDS.
+#
+# Edit and save the file as 'config.csv'
+# PLEASE NOTE: 'config.csv' is included in '.gitignore' so that it is
+# not accidentially committed. NEVER commit usernames/passwords or 
+# similar sensistive data.
+variable,value
+wrds_user,user_name
+wrds_pwd,password
+
