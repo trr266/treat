@@ -1,0 +1,192 @@
+
+%% BEAMER THEME TRR266
+\mode<presentation>
+
+\RequirePackage{tikz}
+	\usetikzlibrary{calc}						%teaches tikz to calculate coordinates
+	%\usetikzlibrary{matrix}						%nice matrices
+	\usetikzlibrary{positioning}				%relative positioning of nodes
+\RequirePackage{etoolbox}
+\RequirePackage{cmbright}
+\RequirePackage[T1]{fontenc}					%normale times modern schriftfamilie
+\RequirePackage{kvoptions}
+%\RequirePackage{xparse}
+\usepackage{fontspec}
+
+
+% Options-------------------------------------------------------------------------------------------
+
+
+% Logos---------------------------------------------------------------------------------------------
+
+\newdimen\logosizesmall
+\logosizesmall=6mm
+\setmainfont{Calibri}
+
+%\pgfdeclareimage[height=\logosizesmall]{upb}{UPBLog}
+
+
+% Settings = including color, inner, and outer theme
+
+%% COLOR THEME
+\mode<presentation>
+
+
+% Definitions
+% Primary colors
+\definecolor{petroltrr}{RGB}{20,103,107}
+\definecolor{yellowtrr}{RGB}{236,144,7}
+\definecolor{bluetrr}{RGB}{42,175,210}
+\definecolor{redtrr}{RGB}{111,53,75}
+
+% Secondary colors
+\definecolor{lilactrr}{RGB}{34,53,93}
+\definecolor{darkpetroltrr}{RGB}{29,117,141}
+\definecolor{darkgreentrr}{RGB}{34,75,79}
+\definecolor{lightpetroltrr}{RGB}{27,138,143}
+\definecolor{lightyellowtrr}{RGB}{255,180,59}
+\definecolor{lightbluetrr}{RGB}{110,202,226}
+\definecolor{lightredtrr}{RGB}{148,70,100}
+
+% Settings
+
+% Settings
+% Title
+%\ifTRR@light%
+%	\setbeamercolor*{title}{bg=white, fg=petroltrr}
+%	\setbeamercolor*{title page header}{bg=white, fg=petroltrr}
+%	\setbeamercolor*{author}{fg=petroltrr!75}
+%	\setbeamercolor*{institute}{fg=petroltrr!75}
+%	\setbeamercolor*{date}{fg=petroltrr}
+%\else%
+\setbeamercolor*{title}{fg=white, bg=petroltrr}
+\setbeamercolor*{title page header}{fg=white, bg=petroltrr}
+\setbeamercolor*{author}{fg=lightpetroltrr!25}
+\setbeamercolor*{institute}{fg=lightpetroltrr!25}
+\setbeamercolor*{date}{fg=lightpetroltrr!40}
+%\fi%
+
+
+\setbeamercolor*{item}{fg=lightpetroltrr}
+\setbeamercolor*{normal text}{fg=black}
+\setbeamercolor*{itemize item}{fg=petroltrr}
+\setbeamercolor*{itemize subitem}{parent=itemize item}
+\setbeamercolor*{itemize subsubitem}{parent=itemize item}
+\setbeamercolor*{enumerate subitem}{parent=itemize item}
+\setbeamercolor*{enumerate item}{parent=itemize item}
+\setbeamercolor*{description item}{parent=itemize item}
+\setbeamercolor*{section number projected}{fg=petroltrr}
+\setbeamercolor*{section in toc}{fg=petroltrr}
+\setbeamercolor*{section title}{fg=petroltrr}
+\setbeamercolor*{section in head/foot}{fg=petroltrr}
+\setbeamercolor*{frametitle}{fg=petroltrr}
+\setbeamercolor*{page number in head/foot}{fg=petroltrr}
+\setbeamercolor*{section in toc}{fg=petroltrr}
+\setbeamercolor*{block title}{fg=petroltrr}
+\setbeamercolor*{block body}{fg=lightpetrol!30}
+
+\hypersetup{colorlinks=true,urlcolor=lightbluetrr,linkcolor=petroltrr}
+
+% Framed blocks
+\setbeamercolor*{block title}{fg=petroltrr, bg=white}
+\setbeamercolor*{block body}{fg=black, bg=white}
+
+% Filled blocks
+%\setbeamercolor*{block title}{fg=petroltrr, bg=lightpetroltrr!50}
+%\setbeamercolor*{block body}{fg=black, bg=block title.bg}
+
+\mode
+<all>
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=true]  
+
+\setbeamertemplate{footline}[page number]{}
+
+%gets rid of navigation symbols
+\setbeamertemplate{navigation symbols}{}
+\mode<all>
+
+
+%% INNER THEME
+\mode<presentation>
+
+\setbeamertemplate{background}{
+  \begin{tikzpicture}
+  \useasboundingbox (0,0) rectangle(\the\paperwidth,\the\paperheight);
+  \fill[color=petroltrr] (0,1.9) rectangle (\the\paperwidth,\the\paperheight);
+  \fill[color=lightpetroltrr] (0,0) rectangle(2,1.8);
+  \fill[color=darkgreentrr!90] (2.1,0) rectangle(\the\paperwidth,1.8);
+  \ifnum\thepage>1\relax%
+   \fill[white,opacity=1] (0,0) rectangle(\the\paperwidth,\the\paperheight);
+   \fi
+  \end{tikzpicture}
+}
+
+
+
+
+% Title page
+\defbeamertemplate*{title page}{trr266}[1][]
+{ 
+		\begin{tikzpicture}
+			%\fill[color=petroltrr] ($(0,\the\paperheight)+(0,-1.825cm)$) rectangle (\the\paperwidth,\the\paperheight);
+			%\fill[color=lightpetroltrr!25] (0,.6cm) rectangle (\the\paperwidth,1.6cm);
+			%\fill[color=lightpetroltrr!55] (0,0) rectangle (\the\paperwidth,.6cm);
+			%\node[outer sep=0cm, inner sep=0cm, anchor=south, font=\tiny, petroltrr] at (0.5*\the\paperwidth,0.2)
+			%	{Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) –- 
+			%	Project-ID 403041268 – TRR 266};
+			\node[outer sep=0cm, inner sep=0cm, anchor=north] at (-0.5*\the\paperwidth,\the\paperheight) 
+				{\includegraphics[keepaspectratio, height=1.5cm]{trr266logo.png}};
+		\end{tikzpicture}
+  \vskip1.5cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=1cm,#1]{title page header}
+      \usebeamerfont{title}\inserttitle\par%
+    \end{beamercolorbox}%
+    \vskip.35cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=1cm,sep=1pt,#1]{author}
+      \usebeamerfont{author}\insertauthor%
+    \end{beamercolorbox}
+     \vskip3.5cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=2cm,#1]{institute}
+      \usebeamerfont{author}\insertinstitute%
+    \end{beamercolorbox}
+     \vskip.1cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=2cm,#1]{date}
+      \usebeamerfont{author}\insertdate%
+    \end{beamercolorbox}
+  \vfil
+
+}
+
+% Items
+\setbeamertemplate{items}[square]
+\setbeamertemplate{sections/subsections in toc}[square]
+
+\mode
+<all>
+
+%% OUTER THEME
+\mode<presentation>
+
+% Frame title
+\defbeamertemplate*{frametitle}{trr266}[1][]
+{
+\vskip1cm%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.5cm]{frametitle} 
+  \begin{tikzpicture}
+  \useasboundingbox[fill=white](0,0) rectangle(\the\paperwidth,0.5);
+  \fill[lightpetroltrr!50] (0,0) rectangle(2,1.2);
+  \fill[petroltrr] (2.1,0) rectangle(\the\paperwidth,1.2);
+   \ifx\insertframesubtitle\@empty%
+      {\node[anchor=west, white,font=\large] at (2.2,0.7){\insertframetitle};}
+      \else%
+      {\node[anchor= west, white,font=\large] at (2.2,0.7){\insertframetitle};%
+       \node[anchor= west, white,font=\small] at (2.21,0.30){\insertframesubtitle};}%
+      \fi
+  \end{tikzpicture}
+  \end{beamercolorbox}
+}
+
+\mode<all>
+

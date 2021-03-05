@@ -53,12 +53,6 @@ ff48 <- read_csv(
   "data/external/fama_french_48_industries.csv", col_types = cols()
 )
 
-rest_data <- readRDS("data/pulled/rest_data.rds")
-crsp_ccm_link <- readRDS("data/pulled/crsp_a_ccm_link.rds") %>%
-  filter(usedflag == 1,
-         linktype %in% c("LU","LC","LD","LN","LS","LX")) %>%
-  select(gvkey, lpermno, lpermco, linkdt, linkenddt)
-
 us_base_sample <- readRDS("data/pulled/cstat_us_sample.RDS") %>%
   filter(
     indfmt == "INDL",
@@ -67,23 +61,6 @@ us_base_sample <- readRDS("data/pulled/cstat_us_sample.RDS") %>%
     at > 0,
     sale > 0
   ) %>%
-  left_join(crsp_ccm_link, by = c("gvkey")) %>%
-  mutate(
-    crsp = ifelse(
-      is.na(lpermno), FALSE,
-      ifelse(
-        is.na(linkenddt), 
-        datadate >= linkdt,  
-        datadate >= linkdt &
-          linkenddt >= datadate %m-% months(12))
-      )
-    ) %>%
-  # this generates duplicates for firms with multiple shares outstanding
-  # or for firms that change the issue during the fiscal year. We do
-  # not care about the exact share link as we won't be linking CRSP
-  # data. We simply keep the first match
-  distinct(gvkey, fyear, .keep_all = TRUE) %>%
-  select(-lpermno, -lpermco, -linkdt, -linkenddt) %>%
   mutate(sic = ifelse(!is.na(sich), sprintf("%04d", sich), sic)) %>%
   filter(
     !is.na(sic),
@@ -93,25 +70,13 @@ us_base_sample <- readRDS("data/pulled/cstat_us_sample.RDS") %>%
   left_join(ff12, by = "sic") %>%
   filter(!is.na(ff48_ind) & !is.na(ff12_ind)) 
 
-rd <- us_base_sample %>%
-  select(gvkey, fyear, cik, datadate) %>%
-  rename(fye = datadate) %>%
-  mutate(fys = fye - years(1)) %>%
-  full_join(rest_data, by = c("cik" = "company_fkey")) %>%
-  filter(
-    !is.na(res_notif_key),
-    !(fys >  res_end_date),
-    !(fye < res_begin_date)
-  ) %>%
-  group_by(gvkey, fyear) %>% 
-  summarise(
-    res_accounting = sum(res_accounting) > 0,
-    res_fraud = sum(res_fraud) > 0,
-    res_sec_invest = sum(res_sec_invest) > 0,
-    res_adverse = sum(res_adverse) > sum(res_improves),
-    .groups = "drop"
-  ) %>%
-  filter(res_accounting | res_fraud | res_sec_invest) 
+us_base_sample %>%
+  group_by(gvkey, fyear) %>%
+  filter(n() > 1) -> dup_obs
+
+if(nrow(dup_obs) > 0) stop(
+  "Duplicate firm-year observations in Compustat data, stored in 'dup_obs'."
+)
 
 
 # --- Calculate modified Jones model accruals and statistics -------------------
@@ -143,7 +108,7 @@ estimate_mj_accruals <- function(df, min_obs = 10) {
   mj_resids <- mj %>%
     mutate(residuals = map2(data, model, add_residuals)) %>%
     unnest(residuals) %>%
-    rename(mj_da = resid) %>%
+    mutate(mj_da = unname(resid)) %>%
     select(gvkey, fyear, ff48_ind, mj_da)
   
   mj_adjr2s <- mj %>%
@@ -194,7 +159,7 @@ estimate_dd_accruals <- function(df, min_obs = 10) {
   dd_resids <- dd %>%
     mutate(residuals = map2(data, model, add_residuals)) %>%
     unnest(residuals) %>%
-    rename(dd_da = resid) %>%
+    mutate(dd_da = unname(resid)) %>%
     select(gvkey, ff48_ind, fyear, dd_da)
   
   dd_adjr2s <- dd %>%
@@ -231,7 +196,6 @@ smp<- expand_grid(
   left_join(us_base_sample, by = c("gvkey", "fyear")) %>%
   left_join(mj, by = c("gvkey", "fyear")) %>%
   left_join(dd, by = c("gvkey", "fyear")) %>%
-  left_join(rd, by = c("gvkey", "fyear")) %>%
   mutate(
     ta = at,
     avgta = (at + lag(at))/2,
@@ -241,7 +205,7 @@ smp<- expand_grid(
     ln_sales = log(sales),
     ln_mktcap = log(mktcap),
     mtb = (csho * prcc_f)/ceq,
-    sales_growth = sale/lag(sale),
+    sales_growth = log(sale)/log(lag(sale)),
     leverage = lt/at,
     ppe_ta = ppent/at,
     int_ta = intan/at,
@@ -255,12 +219,8 @@ smp<- expand_grid(
     tacc_avgta = (ibc - oancf)/avgta,
     ceq_ta = ceq/at,
     mj_ada = abs(mj_da),
-    dd_ada = abs(dd_da),
-    res_accounting = ifelse(is.na(res_accounting), FALSE, res_accounting), 
-    res_fraud = ifelse(is.na(res_fraud), FALSE, res_fraud), 
-    res_sec_invest = ifelse(is.na(res_sec_invest), FALSE, res_sec_invest), 
-    res_adverse = ifelse(is.na(res_adverse), FALSE, res_adverse), 
-    restatement = res_accounting | res_fraud | res_sec_invest) %>%
+    dd_ada = abs(dd_da) 
+  ) %>%
   select(
     gvkey, conm, fyear, ff12_ind, ff48_ind,
     ta, sales, mktcap, ln_ta, ln_sales, ln_mktcap,
@@ -268,10 +228,7 @@ smp<- expand_grid(
     mtb, sales_growth, leverage,
     ppe_ta, int_ta, gwill_ta, ceq_ta, leverage, 
     acq_sales, cogs_sales, ebit_sales, 
-    ebit_avgta, cfo_avgta, tacc_avgta,
-    restatement, res_accounting, res_fraud, res_sec_invest, res_adverse) %>%
-  filter(!is.na(mj_da),
-         fyear > 1993,
-         fyear < 2020)
+    ebit_avgta, cfo_avgta, tacc_avgta
+  ) %>% filter(!is.na(mj_da))
 
 saveRDS(smp, "data/generated/acc_sample.rds")

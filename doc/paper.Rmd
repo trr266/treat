@@ -1,0 +1,190 @@
+---
+title: |
+  | Exporing Discretionary Accruals: 
+  | A Stub Project^[I acknowledge financial support from Deutsche Forschungsgemeinschaft-Project-ID 403041268 - TRR 266.] \vspace{1cm}
+
+author: |
+  | Joachim Gassen 
+  | TRR 266 \"Accounting for Transparency\"
+  | Humboldt-Universität zu Berlin 
+  | gassen@wiwi.hu-berlin.de
+
+date: |
+  | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %e, %Y'); Sys.setlocale("LC_TIME", loc); fdate` \vspace{1cm}
+  
+abstract: |
+  | The Open Science movement promotes the accessibility and reusability of research. This repository has the objective to help researchers establishing such an collaboration-oriented workflow. It uses a toy project on discretionary accruals for demonstration. 
+  | \vspace{6cm}
+
+bibliography: references.bib
+biblio-style: apsr
+
+output:
+  pdf_document: 
+    number_sections: true
+  toc: no
+fig_caption: yes
+fontsize: 11pt
+ident: yes
+
+always_allow_html: yes
+
+header-includes:
+  - \usepackage[nolists]{endfloat}    
+  - \usepackage{setspace}\doublespacing
+  - \setlength{\parindent}{4em}
+  - \setlength{\parskip}{0em}
+  - \usepackage[hang,flushmargin]{footmisc}
+  - \usepackage{caption} 
+  - \captionsetup[table]{skip=24pt,font=bf}
+  - \usepackage{array}
+  - \usepackage{threeparttable}
+  - \usepackage{adjustbox}
+  - \usepackage{graphicx}
+  - \usepackage{csquotes}
+---
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(ExPanDaR)
+library(kableExtra)
+opts_chunk$set(fig.pos = 'p') # Places figures on their own pages
+opts_chunk$set(out.width = '100%', dpi=300)
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE, cache = FALSE)
+```
+
+```{r load_results, include=FALSE}
+load("../output/results.rda")
+```
+
+\pagebreak
+
+# Introduction
+  
+This is not a paper but a stub that is part of a [project template repository](https://github.com/trr266/project_template). We developed this repository to provide a prototype for a reproducible and collaborative workflow. Several authors have discussed advantages of such workflows (@W_2017, @GGR_2018, @CFM_2019) and many scholars across fields have voiced the need for increased reproducibility in science (e.g., @I_2005, @GL_2014, @DPR_2017).
+
+
+# Discretionary Accruals
+
+To demonstrate our workflow, we explore discretionary accruals across the U.S. We calculate modified Jones and Dechow and Dichev type accruals and show their distributional properties. The main purpose of all this, however, is to provide a toy use case for [our project template directory](https://github.com/trr266/project_template) that contains all the code to obtain the data, run the analysis and prepare a paper as well as a presentation.
+
+\ref{tab:descriptives} presents our data that is based on a simple WRDS pull of Compustat data with financial firms (SIC 6XXX) excluded. We require data to calculate all variables and this drastically reduces the sample size. Modified Jones discretionary accruals are calculated loosely based on @HN_2007 and Dechow and Dichev discretionary accruals are calculated based on (big surprise) @DD_2002. As you will see from \ref{fig:boxplot_smp}, discretionary accruals are very noisy constructs, even after limiting the sample to observations with complete data and winsorizing all data to the top and bottom percentile for each year. Figure \ref{fig:scatter_dd_lnta} shows a very prominent heteroscedasticity of discretionary accruals with regards to size. While researchers have tried to address this problem, the distributional properties of these constructs significantly complicate the interpretation of discretionary accrual-related findings. Especially in high powered settings, the measurement error, being highly correlated with size, will tend to load on variables that are unrelated to the underlying economic construct but correlated with size. \ref{tab:corr} shows some correlations and \ref{tab:reg} shows some completely pointless regressions.
+
+
+```{r BoxPlot, echo = FALSE, fig.align="center", fig.cap="\\label{fig:boxplot_smp}Distribution of Discretionary Accruals over Time"}
+fig_boxplot_smp
+```
+
+
+```{r Scatter, echo = FALSE, fig.align="center", fig.cap="\\label{fig:scatter_dd_lnta}Dechow and Dichev DA and Firm Size"}
+fig_scatter_dd_lnta
+```
+
+
+```{r tab_descriptives_sample, results="asis"}
+desc_rnames <- paste0("\\textit{", var_names$label, "}")
+t <- tab_desc_stat
+rownames(t$df) <- desc_rnames
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
+kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
+      caption = "\\label{tab:descriptives}Descriptive Statistics",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE),
+      booktabs = TRUE, escape = FALSE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[6] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[8] <- "\\hline\\\\[-1.8ex]"
+lat_tab[length(lat_tab) - 2] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+
+latex_tab <- c(
+  "\\begin{table}[!htbp]",  
+  lat_tab[3],
+  "\\begin{adjustbox}{width=\\textwidth}",
+  "\\begin{threeparttable}",
+  lat_tab[5:(length(lat_tab) - 1)],
+  "\\begin{tablenotes}[flushleft]",
+  "\\setlength{\\labelsep}{0pt}",
+  "\\footnotetext",
+  sprintf(
+    paste(
+      "\\item Note: The data is obtained from the Compustat U.S. as provided",
+      "by WRDS. The sample covers the period %d to %d and %s unique firms."
+    ),
+    min(smp_da$fyear), max(smp_da$fyear), 
+    format(length(unique(smp_da$gvkey)), big.mark = ",")
+  ),
+  "\\end{tablenotes}",
+  "\\end{threeparttable}",
+  "\\end{adjustbox}",
+  "\\end{table}"
+)
+cat(paste(latex_tab, collapse = "\n"))  
+```
+
+``` {r CorrTable, results="asis"}
+tab <- tab_corr
+lat_tab <- unlist(strsplit(tab$kable_ret, "\n"))
+lat_tab[7:13] <- str_replace(
+  lat_tab[7:13], fixed(var_names$var_name), var_names$label
+)
+lat_tab[4] <- "\\\\[-0.9ex]\\hline \\hline \\\\[-0.9ex]"
+lat_tab[6] <- "\\hline\\\\[-1.8ex]"
+lat_tab[14] <- "\\\\[-0.9ex]\\hline \\hline \\\\[-0.9ex]"
+lat_tab[16] <- "\\begin{tablenotes}[flushleft]"
+
+latex_tab <- c(
+  "\\begin{table}[!htbp]",  
+  "\\centering",
+  "\\caption{\\label{tab:corr}Correlations}",
+  lat_tab,
+  "\\end{table}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+``` {r RegTable, results="asis"}
+tab <- tab_regression$table
+tab[12] <- paste(
+  "\\\\[-1.8ex] &", var_names$label[1], 
+  "&", var_names$label[2], "\\\\"
+)
+esc_var_names <- str_replace_all(var_names$var_name, fixed ("_"), "\\_")
+reg_names <- tibble(
+  var_name = esc_var_names[c(3, 5:7)],
+  label = var_names$label[c(3, 5:7)]
+)
+for (i in seq(15, 24, by = 3)) {
+  pos <- (i-12)/3
+  tab[i] <- str_replace(
+    tab[i], fixed(reg_names$var_name[pos]), reg_names$label[pos]
+  )
+}
+latex_tab <- c(
+  "\\begin{table}[!htbp]",  
+  "\\caption{\\label{tab:reg}Regressions}",
+  "\\centering",
+  "\\begin{tabular}{lcc}",
+  tab[8:36],
+  "\\end{tabular}",
+  "\\end{table}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+# Conclusion
+
+Isn't that wonderful? Discretionary accruals rock but what rocks even more is open science and a collaborative workflow. Clone or fork this repository to kickstart your own projects. If you do not like R, consider contributing code in your favorite statistical programming language to the repo. Thanks for reading and enjoy!
+
+\pagebreak
+
+\setcounter{table}{0}
+\renewcommand{\thetable}{\arabic{table}}
+
+# References {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent

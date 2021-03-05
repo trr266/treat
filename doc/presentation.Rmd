@@ -1,0 +1,177 @@
+---
+title: "Exploring Discretionary Accruals"
+author: "Joachim Gassen"
+institute: "TRR 266 Accounting for Transparency"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+fontsize: "9pt"
+output: 
+  beamer_presentation: 
+    latex_engine: xelatex # pdflatex might not work (due to fontspec)
+    slide_level: 3
+
+        
+header-includes:
+- \usepackage{booktabs} 
+- \usepackage{threeparttable}
+- \usepackage{graphicx}
+- \input{beamer_theme_trr266.sty}
+---
+
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+knitr::opts_chunk$set(
+  cache = FALSE, echo = FALSE, message = FALSE, warning = FALSE
+)
+library(tidyverse)
+library(kableExtra)
+load("../output/results.rda")
+```
+
+
+# Motivation
+
+### Discretionary Accruals
+
+- Are used in tons of papers
+- As measurement constructs for almost everything
+  - Earnings Management
+  - Earnings Quality
+  - Audit Quality
+  - Management Quality
+- But how do they look like?
+
+
+### Data
+
+```{r tab_descriptives_sample, results="asis"}
+desc_rnames <- paste0("\\textit{", var_names$label, "}")
+
+t <- tab_desc_stat
+rownames(t$df) <- desc_rnames
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
+kable(
+  t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
+  format.args = list(decimal.mark = ".", big.mark = ",", scientific=FALSE),
+  booktabs = TRUE, escape = FALSE, linesep = ""
+) -> kab_latex
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+latex_tab <- c(
+  "\\begin{table}[!htbp]",  
+  "\\resizebox{\\textwidth}{!}{",
+  "\\begin{threeparttable}",
+  lat_tab[2:(length(lat_tab) - 1)],
+  "\\end{tabular}",
+  "\\begin{tablenotes}[flushleft]",
+  "\\setlength{\\labelsep}{0pt}",
+  sprintf(
+    paste(
+      "\\item Note: The data is obtained from Compustat U.S. as provided",
+      "by WRDS. The sample covers the period %d to %d and %s unique firms."
+    ),
+    min(smp_da$fyear), max(smp_da$fyear), 
+    format(length(unique(smp_da$gvkey)), big.mark = ",")
+  ),
+  "\\end{tablenotes}",
+  "\\end{threeparttable}",
+  "}",
+  "\\end{table}"
+)
+
+cat(paste(latex_tab, collapse = "\n"))  
+```
+
+
+### Distribution of Discretionary Accruals over time - unrestricted sample
+
+```{r BPlotFULL}
+fig_boxplot_full
+```
+
+
+### Distribution of Discretionary Accruals over time - analysis sample
+
+```{r BPlotSMP}
+fig_boxplot_smp
+```
+
+
+### Correlation of Modified Jones with Dechow and Dichev DA
+
+```{r CorrVizz}
+fig_scatter_md_dd
+```
+
+
+### Association of Dechow and Dichev DA with firm size
+
+```{r AssDDSize}
+fig_scatter_dd_lnta
+```
+
+
+### No presentation without correlation table...
+
+``` {r CorrTable, results="asis"}
+tab <- tab_corr
+lat_tab <- unlist(strsplit(tab$kable_ret, "\n"))
+lat_tab[7:13] <- str_replace(
+  lat_tab[7:13], fixed(var_names$var_name), var_names$label
+)
+lat_tab[4] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[6] <- "\\hline\\\\[-1.8ex]"
+lat_tab[14] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+latex_tab <- c(
+  "\\begin{center}",
+  "\\resizebox*{\\textwidth}{!}{",
+  "\\begin{tabular}{lccccccc}",
+  lat_tab[4:14],
+  "\\end{tabular}}",
+  "\\end{center}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### ... and regression table
+
+``` {r RegTable, results="asis"}
+tab <- tab_regression$table
+tab[12] <- paste(
+  "\\\\[-1.8ex] &", var_names$label[1], 
+  "&", var_names$label[2], "\\\\"
+)
+esc_var_names <- str_replace_all(var_names$var_name, fixed ("_"), "\\_")
+reg_names <- tibble(
+  var_name = esc_var_names[c(3, 5:7)],
+  label = var_names$label[c(3, 5:7)]
+)
+for (i in seq(15, 24, by = 3)) {
+  pos <- (i-12)/3
+  tab[i] <- str_replace(
+    tab[i], fixed(reg_names$var_name[pos]), reg_names$label[pos]
+  )
+}
+latex_tab <- c(
+  "\\begin{center}",
+  "\\resizebox*{!}{0.8\\textheight}{",
+  "\\begin{tabular}{lcc}",
+  tab[8:36],
+  "\\end{tabular}}",
+  "\\end{center}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### Conclusion
+
+- Discretionary accruals are simply wonderful! 
+- With these distributional properties and the power of large samples they will almost always be significant in one direction or the other regardless the setting or controls
+- Use them for every economic construct under the sun!
+
+
+
+
+
+
+

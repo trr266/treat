@@ -39,6 +39,9 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+# Rendered README file
+README.html
+
 # OS specific files
 .DS_Store
 
