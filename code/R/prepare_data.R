@@ -29,7 +29,7 @@ mleadlag <- function(x, n, ts_id) {
 }
 
 winsorize <- function(df, percentile = 0.01, 
-                      include=NULL, exclude=NULL, byval=NULL) {
+                      include = NULL, exclude = NULL, byval = NULL) {
   if (!is.null(exclude) & !is.null(include)) 
     stop("You can only set exclude or include, not both.")
   if (!is.null(exclude)) vars <- !(names(df) %in% exclude)
