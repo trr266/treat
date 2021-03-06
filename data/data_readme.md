@@ -14,6 +14,6 @@ These directories are meant to be organized as follows:
   sources. Most of the time a data codebook won't be necessary as the external
   sources will provide documentation.
   
-Obviously, you can use more descriptive folder names as you see fit. But we would encourage you to always separate external data from code generated data and to only commit data that cannot be code generated. An exception could be made on cases where generating the data takes substantial time the resulting dataset is relatively small.
+Obviously, you can use more descriptive folder names as you see fit. But we would encourage you to always separate external data from code generated data and to only commit data that cannot be code generated. An exception could be made on cases where generating the data takes substantial time and the resulting dataset is relatively small.
 
 In the folders 'pulled' and 'generated' a .gitignore prevents accidental committing of generated data.  
