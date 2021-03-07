@@ -39,26 +39,26 @@ If you do not see 'Build' tab this is most likely because you do not have 'make'
 
 ```
 # Code to install packages to your system
-
-install.packages("tidyverse")
-install.packages("modelr")
-install.packages("purrr")
-install.packages("broom")
-install.packages("lubridate")
-install.packages("ExPanDaR")
-install.packages("RPostgres")
-install.packages("DBI")
-install.packages("knitr")
-install.packages("ExPanDaR")
-install.packages("kableExtra")
-install.packages("RMarkdown")
+install_package_if_missing <- function(pkg) {
+  if (! pkg %in% installed.packages()[, "Package"]) install.packages(pkg)
+}
+install_package_if_missing("tidyverse")
+install_package_if_missing("modelr")
+install_package_if_missing("broom")
+install_package_if_missing("lubridate")
+install_package_if_missing("ExPanDaR")
+install_package_if_missing("RPostgres")
+install_package_if_missing("DBI")
+install_package_if_missing("knitr")
+install_package_if_missing("kableExtra")
+install_package_if_missing("rmarkdown")
 
 # In addition, if you have no working LaTeX environment, consider
 # installing the neat tinytex LateX distribution. It is lightweight and
 # you can install it from wihtin R! See https://yihui.org/tinytex/
 # To install it, run from the R console:
 
-install.packages('tinytex')
+install_package_if_missing('tinytex')
 tinytex::install_tinytex()
 
 # That's all!
