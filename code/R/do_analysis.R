@@ -31,7 +31,7 @@ smp_da <- smp %>%
 
 smp_da <- smp_da[is.finite(rowSums(smp_da %>% select(-gvkey, -ff12_ind))),]
 
-smp_da <- ExPanDaR::treat_outliers(smp_da, by = "fyear")
+smp_da <- treat_outliers(smp_da, by = "fyear")
 
 fig_boxplot_smp <- graph_boxplot(smp_da)
 

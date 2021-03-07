@@ -28,21 +28,15 @@ mleadlag <- function(x, n, ts_id) {
   x[pos]
 }
 
-winsorize <- function(df, percentile = 0.01, 
-                      include=NULL, exclude=NULL, byval=NULL) {
-  if (!is.null(exclude) & !is.null(include)) 
-    stop("You can only set exclude or include, not both.")
-  if (!is.null(exclude)) vars <- !(names(df) %in% exclude)
-  else if (!is.null(include)) {
-    if (!is.null(byval)) include <- c(byval, include) 
-    vars <- names(df) %in% include
+winsorize <- function(df, drop = NULL, ...) {
+  if(is.null(drop)) treat_outliers(df, ...)
+  else {
+    vars <- !(names(df) %in% drop)
+    ret <- df
+    ret[vars] <- treat_outliers(ret[vars], ...)
+    return(ret)
   }
-  else vars <- names(df)
-  ret <- df
-  ret[vars] <- treat_outliers(ret[vars], percentile, by = byval)
-  return(ret)
 }
-
 
 # --- Prepare base sample ------------------------------------------------------
 
@@ -81,10 +75,10 @@ if(nrow(dup_obs) > 0) stop(
 
 # --- Calculate modified Jones model accruals and statistics -------------------
 
+# Methodology is somewhat loosely based on Hribar and Nichols (JAR, 2007)
+# https://doi.org/10.1111/j.1475-679X.2007.00259.x
 
 estimate_mj_accruals <- function(df, min_obs = 10) {
-  # Methodology is somewhat loosely based on Hribar and Nichols (JAR, 2007)
-  # https://doi.org/10.1111/j.1475-679X.2007.00259.x
   mj <- df %>%
     group_by(gvkey) %>%
     mutate(
@@ -99,23 +93,27 @@ estimate_mj_accruals <- function(df, min_obs = 10) {
       !is.na(drev),
       !is.na(ppe)
     ) %>%
+    select(gvkey, ff48_ind, fyear, tacc, drev, inverse_a, ppe) %>%
     group_by(ff48_ind, fyear) %>%
     filter(n() >= min_obs) %>%
-    winsorize(include = c("tacc", "drev", "inverse_a", "ppe")) %>%
+    winsorize(drop = "fyear") %>%
     nest() %>%
-    mutate(model = map(data, accrual_model_mjones)) 
+    mutate(model = map(data, accrual_model_mjones))
   
   mj_resids <- mj %>%
-    mutate(residuals = map2(data, model, add_residuals)) %>%
-    unnest(residuals) %>%
+    mutate(resids = map2(data, model, add_residuals)) %>%
+    unnest(resids) %>%
     mutate(mj_da = unname(resid)) %>%
     select(gvkey, fyear, ff48_ind, mj_da)
   
   mj_adjr2s <- mj %>%
     mutate(glance = map(model, glance)) %>%
     unnest(glance) %>%
-    rename(mj_adjr2 = adj.r.squared) %>%
-    select(ff48_ind, fyear, mj_adjr2)
+    rename(
+      mj_nobs = nobs,
+      mj_adjr2 = adj.r.squared
+    ) %>%
+    select(ff48_ind, fyear, mj_nobs, mj_adjr2)
   
   mj_coefs <- mj %>%
     mutate(coef = map(model, tcoef)) %>%
@@ -150,23 +148,27 @@ estimate_dd_accruals <- function(df, min_obs = 10) {
            !is.na(cfo),
            !is.na(lagcfo),
            !is.na(leadcfo)) %>%
+    select(gvkey, ff48_ind, fyear, dwc, cfo, lagcfo, leadcfo) %>%
     group_by(ff48_ind, fyear) %>%
     filter(n() >= min_obs) %>%
-    winsorize(include = c("dwc", "cfo", "lagcfo", "leadcfo")) %>%
+    winsorize(drop = "fyear") %>%
     nest() %>%
     mutate(model = map(data, accrual_model_dd)) 
   
   dd_resids <- dd %>%
-    mutate(residuals = map2(data, model, add_residuals)) %>%
-    unnest(residuals) %>%
+    mutate(resids = map2(data, model, add_residuals)) %>%
+    unnest(resids) %>%
     mutate(dd_da = unname(resid)) %>%
     select(gvkey, ff48_ind, fyear, dd_da)
   
   dd_adjr2s <- dd %>%
     mutate(glance = map(model, glance)) %>%
     unnest(glance) %>%
-    rename(dd_adjr2 = adj.r.squared) %>%
-    select(ff48_ind, fyear, dd_adjr2)
+    rename(
+      dd_nobs = nobs,
+      dd_adjr2 = adj.r.squared
+    ) %>%
+    select(ff48_ind, fyear, dd_nobs, dd_adjr2)
   
   dd_coefs <- dd %>%
     mutate(coef = map(model, tcoef)) %>%
@@ -211,7 +213,7 @@ smp<- expand_grid(
     int_ta = intan/at,
     gwill_ta = gdwl/at,
     acq_sales = (ifelse(!is.na(aqs), aqs, 0) + 
-                        ifelse(!is.na(acqsc), acqsc, 0))/sale,
+                   ifelse(!is.na(acqsc), acqsc, 0))/sale,
     cogs_sales = cogs/sale,
     ebit_sales = (ib + xint)/sale,
     ebit_avgta = (ib + xint)/avgta,
@@ -224,7 +226,7 @@ smp<- expand_grid(
   select(
     gvkey, conm, fyear, ff12_ind, ff48_ind,
     ta, sales, mktcap, ln_ta, ln_sales, ln_mktcap,
-    mj_da, dd_da, mj_ada, dd_ada,
+    mj_da, dd_da, mj_ada, dd_ada, mj_nobs, dd_nobs,
     mtb, sales_growth, leverage,
     ppe_ta, int_ta, gwill_ta, ceq_ta, leverage, 
     acq_sales, cogs_sales, ebit_sales, 
