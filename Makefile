@@ -43,10 +43,10 @@ $(RESULTS):	$(GENERATED_DATA) code/R/do_analysis.R
 	$(RSCRIPT) code/R/do_analysis.R
 
 $(PAPER): doc/paper.Rmd doc/references.bib $(RESULTS) 
-	$(RSCRIPT) -e 'rmarkdown::render("doc/paper.Rmd")'
+	$(RSCRIPT) -e 'library(rmarkdown); render("doc/paper.Rmd")'
 	mv doc/paper.pdf output
 	rm -f doc/paper.ttt doc/paper.fff
 	
 $(PRESENTATION): doc/presentation.rmd $(RESULTS) 
-	$(RSCRIPT) -e 'rmarkdown::render("doc/presentation.Rmd")'
+	$(RSCRIPT) -e 'library(rmarkdown); render("doc/presentation.Rmd")'
 	mv doc/presentation.pdf output
