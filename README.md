@@ -4,7 +4,7 @@ Welcome! This repository provides an infrastructure for open science oriented em
 
 But even if you do not care about discretionary accruals (who wouldn't?) or do not have WRDS access, its code base should give you a feel on how the template is supposed to be used and how to structure a reproducible empirical project.
 
-Currently, this is all R based but it is not meant to stay that way. You can help by contributing Python and or Stata code that mimics the R analysis steps via pull requests.
+Currently, this is all R based but it is not meant to stay that way. You can help by contributing Python and/or Stata code that mimics the R analysis steps via pull requests.
 
 
 ### Where do I start?
@@ -24,10 +24,10 @@ You also see an `output` directory but it is empty. Why? Because you will create
 
 ### How do I create the output?
 
-Assuming that you have WRDS access and RStudio and make/Rtools installed, this should be relatively straight forward.
+Assuming that you have WRDS access, RStudio and make/Rtools installed, this should be relatively straight forward.
 
 1. Download, clone or fork the repository to your local computing environment.
-2. Before building everything you most likely need need to install additional packages. This repository follows the established principle not to install any packages automatically. This is your computing environment. You decide what you want to install. See the code below for installing the packages.
+2. Before building everything you most likely need to install additional packages. This repository follows the established principle not to install any packages automatically. This is your computing environment. You decide what you want to install. See the code below for installing the packages.
 3. Copy the file _config.csv to config.csv in the project main directory. Edit it by adding your WRDS credentials. 
 4. Run 'make all' either via the console or by identifying the 'Build All' button in the 'Build' tab (normally in the upper right quadrant of the RStudio screen). 
 5. Eventually, you will be greeted with the two files in the output directory: "paper.pdf" and "presentation.pdf". Congratulations! You have successfully used an open science resource and reproduced our "analysis". Now modify it and make it your own project!
