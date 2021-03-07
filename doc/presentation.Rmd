@@ -6,7 +6,7 @@ date: "`r format(Sys.time(), '%B %d, %Y')`"
 fontsize: "9pt"
 output: 
   beamer_presentation: 
-    latex_engine: xelatex # pdflatex might not work (due to fontspec)
+    latex_engine: xelatex # pdflatex creates rastered fonts
     slide_level: 3
 
         

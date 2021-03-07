@@ -8,10 +8,18 @@
 	\usetikzlibrary{positioning}				%relative positioning of nodes
 \RequirePackage{etoolbox}
 \RequirePackage{cmbright}
-\RequirePackage[T1]{fontenc}					%normale times modern schriftfamilie
 \RequirePackage{kvoptions}
 %\RequirePackage{xparse}
-\usepackage{fontspec}
+
+\usepackage{ifxetex}
+\ifxetex
+  \usepackage{fontspec}
+  \defaultfontfeatures{Ligatures=TeX} % To support LaTeX quoting style
+  \setsansfont{Calibri}
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\fi
 
 
 % Options-------------------------------------------------------------------------------------------
@@ -21,7 +29,7 @@
 
 \newdimen\logosizesmall
 \logosizesmall=6mm
-\setmainfont{Calibri}
+
 
 %\pgfdeclareimage[height=\logosizesmall]{upb}{UPBLog}
 
@@ -130,14 +138,14 @@
 \defbeamertemplate*{title page}{trr266}[1][]
 { 
 		\begin{tikzpicture}
-			%\fill[color=petroltrr] ($(0,\the\paperheight)+(0,-1.825cm)$) rectangle (\the\paperwidth,\the\paperheight);
-			%\fill[color=lightpetroltrr!25] (0,.6cm) rectangle (\the\paperwidth,1.6cm);
-			%\fill[color=lightpetroltrr!55] (0,0) rectangle (\the\paperwidth,.6cm);
-			%\node[outer sep=0cm, inner sep=0cm, anchor=south, font=\tiny, petroltrr] at (0.5*\the\paperwidth,0.2)
-			%	{Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) –- 
-			%	Project-ID 403041268 – TRR 266};
+%			\fill[color=petroltrr] ($(0,\the\paperheight)+(0,-1.825cm)$) rectangle (\the\paperwidth,\the\paperheight);
+%		\fill[color=lightpetroltrr!25] (-0.5*\the\paperwidth,.6cm) rectangle (\the\paperwidth,1.6cm);
+%			\fill[color=lightpetroltrr!55] (0,0) rectangle (\the\paperwidth,.6cm);
+%			\node[outer sep=0cm, inner sep=0cm, anchor=south, font=\tiny, petroltrr] at (-0.5*\the\paperwidth,0.2)
+%				{Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) –-
+%				Project-ID 403041268 – TRR 266};
 			\node[outer sep=0cm, inner sep=0cm, anchor=north] at (-0.5*\the\paperwidth,\the\paperheight) 
-				{\includegraphics[keepaspectratio, height=1.5cm]{trr266logo.png}};
+				{\includegraphics[keepaspectratio, height=1.5cm]{trr266_logo.eps}};
 		\end{tikzpicture}
   \vskip1.5cm%
     \begin{beamercolorbox}[wd=12cm,leftskip=1cm,#1]{title page header}
