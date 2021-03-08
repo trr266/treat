@@ -9,7 +9,9 @@ Currently, this is all R based but it is not meant to stay that way. You can hel
 
 ### Where do I start?
 
-If you are new to scientific computing, we suggest that you start by picking up a reference from the list below and browse through it. The Gentzkow and Shapiro (2014) is a particularly easy and also useful read. 
+For those of you new to R, we have "produced" a [series of short videos](https://www.youtube.com/playlist?list=PL-9XqvJlFJ-5NDUXubrbvF3aEQPeoAki3) that guide you through the process of setting up your computing environment and using this repository. Also, there is a [blog post](https://joachim-gassen.github.io/2021/03/get-a-treat/) that details these steps in a written form.
+
+If you are new to scientific computing, we suggest that you also pick up a reference from the list below and browse through it. The [Gentzkow and Shapiro (2014) paper](https://web.stanford.edu/~gentzkow/research/CodeAndData.pdf) is a particularly easy and also useful read. 
 
 Then browse around the repository and familiarize yourself with its folders. You will quickly see that there are three folders that have files in them:
 
