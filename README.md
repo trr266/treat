@@ -83,7 +83,7 @@ Scientific workflows are a matter of preference and taste. What we present here 
 
 ### But there are other templates. Why yet another one?
 
-Of course there are and they a great. The reason why we decided to whip up our own is that we wanted a template that also includes some of the default style elements that we use in our collaborative research center [TRR 266 "Accounting for Transparency"](https://accounting-for-transparency.de). And we wanted to have a template that is centered on workflows that are typical in the accounting and finance domain. Here you go.
+Of course there are and they a great. The reason why we decided to whip up our own is that we wanted a template that also includes some of the default style elements that we use in our collaborative research center [TRR 266 Accounting for Transparency](https://accounting-for-transparency.de). And we wanted to have a template that is centered on workflows that are typical in the accounting and finance domain. Here you go.
 
 
 ### References

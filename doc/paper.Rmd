@@ -5,7 +5,7 @@ title: |
 
 author: |
   | Joachim Gassen 
-  | TRR 266 \"Accounting for Transparency\"
+  | TRR 266 Accounting for Transparency
   | Humboldt-Universität zu Berlin 
   | gassen@wiwi.hu-berlin.de
 
@@ -62,7 +62,7 @@ load("../output/results.rda")
 
 # Introduction
   
-This is not a paper but a stub that is part of a [project template repository](https://github.com/trr266/project_template). We developed this repository to provide a prototype for a reproducible and collaborative workflow. Several authors have discussed advantages of such workflows (@W_2017, @GGR_2018, @CFM_2019) and many scholars across fields have voiced the need for increased reproducibility in science (e.g., @I_2005, @GL_2014, @DPR_2017).
+This is not a paper but a stub that is part of a [project template repository](https://github.com/trr266/treat). We developed this repository to provide a prototype for a reproducible and collaborative workflow. Several authors have discussed advantages of such workflows (@W_2017, @GGR_2018, @CFM_2019) and many scholars across fields have voiced the need for increased reproducibility in science (e.g., @I_2005, @GL_2014, @DPR_2017).
 
 
 # Discretionary Accruals
