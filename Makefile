@@ -6,6 +6,9 @@ PRESENTATION := output/presentation.pdf
 
 TARGETS :=  $(PAPER) $(PRESENTATION)
 
+EXTERNAL_DATA := data/external/fama_french_12_industries.csv \
+	data/external/fama_french_48_industries.csv
+
 WRDS_DATA := data/pulled/cstat_us_sample.rds
 
 GENERATED_DATA := data/generated/acc_sample.rds
@@ -36,7 +39,7 @@ config.csv:
 $(WRDS_DATA): code/R/pull_wrds_data.R code/R/read_config.R config.csv
 	$(RSCRIPT) code/R/pull_wrds_data.R
 
-$(GENERATED_DATA): $(WRDS_DATA) code/R/prepare_data.R
+$(GENERATED_DATA): $(WRDS_DATA) $(EXTERNAL_DATA) code/R/prepare_data.R
 	$(RSCRIPT) code/R/prepare_data.R
 
 $(RESULTS):	$(GENERATED_DATA) code/R/do_analysis.R
