@@ -26,7 +26,7 @@ You also see an `output` directory but it is empty. Why? Because you will create
 
 ### How do I create the output?
 
-Assuming that you have WRDS access, RStudio and make/Rtools installed, this should be relatively straight forward.
+Assuming that you have WRDS access, RStudio and make/Rtools installed, this should be relatively straightforward.
 
 1. Download, clone or fork the repository to your local computing environment.
 2. Before building everything you most likely need to install additional packages. This repository follows the established principle not to install any packages automatically. This is your computing environment. You decide what you want to install. See the code below for installing the packages.
@@ -84,6 +84,19 @@ Scientific workflows are a matter of preference and taste. What we present here 
 ### But there are other templates. Why yet another one?
 
 Of course there are and they a great. The reason why we decided to whip up our own is that we wanted a template that also includes some of the default style elements that we use in our collaborative research center [TRR 266 Accounting for Transparency](https://accounting-for-transparency.de). And we wanted to have a template that is centered on workflows that are typical in the accounting and finance domain. Here you go.
+
+
+### Licensing
+
+This repository is licensed to you under the MIT license, essentially meaning that you can do whatever you want with it as long as you give credit to us when you use substantial portions of it. What 'substantial' means is not trivial for a template. Here is our understanding. If you 'only' use the workflow, the structure and let's say parts of the Makefile and/or the README sections that describe these aspects, we do not consider this as 'substantial' and you do not need to credit us. If, however, you decide to reuse a significant part of the example code, for example the code pulling data from WRDS, we think that giving credit would be appropriate.
+
+In any case, we would love to see you spreading the word by adding a statement like 
+
+```
+This repository was built based on the ['treat' template for reproducible research](https://github.com/trr266/treat).
+```
+
+to your README file. But this is not a legal requirement but a favor that we ask 😉.
 
 
 ### References

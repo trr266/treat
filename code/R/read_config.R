@@ -14,3 +14,4 @@ df <- readr::read_csv("config.csv", col_type = readr::cols(), comment = "#")
 
 cfg <- as.list(df$value)
 names(cfg) <- df$variable
+rm(df)
