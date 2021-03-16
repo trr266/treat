@@ -1,0 +1,172 @@
+---
+title: "Use cases - theme_trr"
+author: "the C02 team"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+The theme_trr ggplot theme function provides a uniform and concise function that implements most of the TRR266 style guides on ggplots. While it can be called on all plots, it is especially designed for 6 types of plots, namely: bar, box, line, lollipop, scatter and smoother plots. This document will showcase the main usages of the theme_trr function with bar plots and add additional recommend changes while showing the usage of the function on other types of graphs.
+
+The most convenient way to use the theme_trr function would be to put the "theme_trr.R" file in your project folder, source the script and load necessary packages. 
+
+```{r warning=FALSE, message=FALSE}
+source(file = "code/R/theme_trr.R")
+
+library(tidyverse)
+library(directlabels)
+```
+
+### Simulated data for demonstration 
+
+The data for showcasing the function is simulated below.
+
+```{r comment=""}
+set.seed(1)
+df <- data.frame(
+  category = sample(as.factor(paste("Group", LETTERS[1:5])),
+    size = 100, replace = T
+  )
+) %>%
+  mutate(
+    sub_group = sample(as.factor(paste("Sub-group", 1:2)),
+      size = 100, replace = T
+    ),
+    x_variable = rnorm(100),
+    y_variable = 0.5 * x_variable + 0.5 * as.numeric(sub_group) + rnorm(100, sd = 0.25)
+  )
+head(df)
+```
+
+### Bar graph
+
+We start with a simple bar graph. 
+
+```{r}
+ggplot(df, aes(category, fill = sub_group)) +
+  geom_bar(position = "dodge")
+```
+ 
+Calling the theme_trr function on such a plot will produce the plot below.
+
+```{r}
+ggplot(df, aes(category, fill = sub_group)) +
+  geom_bar(position = "dodge") +
+  theme_trr(plot_type = "bar", legend = TRUE)
+```
+
+The function has implemented a number of theme changes to the first plot. Next the coloring and space between the x-axis and bars needs adjustment. The scale_fill_trr266 call implements TRR coloring schema and the scale call removes the extra space between the axis and the plots
+
+```{r}
+ggplot(df, aes(category, fill = sub_group)) +
+  geom_bar(position = "dodge") +
+  theme_trr(plot_type = "bar", legend = TRUE) +
+  scale_fill_trr266_d() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0)))
+```
+
+The final adjustment considered here is the lables of the plot and the respective text font. The style guide of TRR recommends the use of 'Calibri Light' and 'Cambria' fonts. Both of them are fonts that come with the Microsoft office distribution. Assuming that you have the necessary fonts on your system, you can use the extrafont library to import the necessary fonts. Importing fonts should be done only once per session.
+
+
+```{r eval = FALSE}
+library(extrafont)
+
+# on most Windows
+font_import(paths = "C:/windows/Fonts", pattern = "calibril")
+font_import(paths = "C:/windows/Fonts", pattern = "cambria")
+
+# on most Mac OS
+font_import(
+  paths = "/Applications/Microsoft Word.app/Contents/Resources/DFonts",
+  pattern = "calibril"
+)
+font_import(
+  paths = "/Applications/Microsoft Word.app/Contents/Resources/DFonts",
+  pattern = "Cambria"
+)
+```
+
+Once these two fonts have been imported an additional theme call can be made to set the right fonts.
+
+```{r}
+ggplot(df, aes(category, fill = sub_group)) +
+  geom_bar(position = "dodge") +
+  theme_trr(plot_type = "bar", legend = TRUE) +
+  scale_fill_trr266_d() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0))) +
+  labs(title = "Title of example plot", subtitle = "Sub-title of example plot") +
+  theme(
+    text = element_text(family = "Calibri Light"),
+    title = element_text(family = "Cambria")
+  )
+```
+
+
+## box plot
+
+Reordering factors in an increasing or decreasing order helps highlight the difference between groups. 
+
+```{r}
+ggplot(df, aes(x = reorder(category, -y_variable), y = y_variable, color = category)) +
+  geom_boxplot() +
+  labs(title = "Title of example plot", x = "category") +
+  scale_color_trr266_d() +
+  theme_trr(plot_type = "box")
+```
+
+## Line graph
+
+When possible, use direct labeling.
+
+```{r}
+ggplot(df, aes(x = x_variable, y = y_variable, color = sub_group)) +
+  geom_line() +
+  labs(title = "Title of example plot") +
+  scale_color_trr266_d() +
+  scale_x_continuous(expand = expansion(mult = c(0, .3))) +
+  geom_dl(aes(label = sub_group), method = list("last.points")) +
+  theme_trr(plot_type = "line", legend = FALSE)
+```
+
+
+## Lollipop plots
+
+Lollipop plots help in reducing clutter, especially when there are numerous categories in a factor variable. 
+
+```{r}
+group_by(df, category) %>%
+  summarise(x_variable = mean(x_variable)) %>%
+  mutate(category = fct_reorder(category, x_variable)) %>%
+  ggplot(aes(x = x_variable, y = category)) +
+  geom_segment(aes(x = 0, y = category, xend = x_variable, yend = category)) +
+  geom_point(size = 2, color = "#1B8A8FFF") +
+  labs(title = "Title of example plot") +
+  theme_trr(plot_type = "Lollipop")
+```
+
+## Scatter
+
+
+```{r }
+ggplot(df, aes(x = x_variable, y = y_variable, color = sub_group)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(title = "Title of example plot") +
+  scale_color_trr266_d() +
+  geom_dl(aes(label = sub_group), method = list("smart.grid", cex = rel(1.1))) +
+  theme_trr(plot_type = "scatter")
+```
+
+## Smoother
+
+```{r }
+ggplot(df, aes(x = x_variable, y = y_variable, color = sub_group)) +
+  geom_smooth() +
+  labs(title = "Title of example plot") +
+  scale_color_trr266_d() +
+  scale_x_continuous(expand = expansion(mult = c(0, .2))) +
+  theme_trr(plot_type = "smoother", legend = T)
+```
