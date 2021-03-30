@@ -55,10 +55,12 @@ You can apply the official TRR266 colors to your ggplot by adding the layer `sca
 
 The `theme_trr` ggplot theme function provides a uniform and concise function that implements most of the TRR266 style guides on ggplot visualizations. While it can be called on all plots, it is especially designed for six types of plots (ggplot "geoms"), namely: `bar`, `box`, `line`, `lollipop`, `scatter` and `smoother` plots. This document will showcase the main usages of the `theme_trr` function with bar plots and add additional recommended changes while showing the usage of the function on other types of graphs.
 
-The most convenient way to use the `theme_trr` function would be to put the `theme_trr.R` file in your project folder, source the script and load necessary packages. 
+The most convenient way to use the `theme_trr` function would be to put the `theme_trr.R` file in your project folder, source the script and load necessary packages. You could also source the file `theme_trr.R` by integrating the following line of code into your R code: `devtools::source_url("https://raw.githubusercontent.com/trr266/treat/main/code/R/theme_trr.R")`.
 
 ```{r warning=FALSE, message=FALSE}
 source(file = "code/R/theme_trr.R")
+# you can source the file using the following line of code:
+# devtools::source_url("https://raw.githubusercontent.com/trr266/treat/main/code/R/theme_trr.R")
 
 library(tidyverse)
 library(directlabels)
