@@ -14,7 +14,7 @@ theme_trr <- function(
     "bar", "box", "lollipop", "line", "scatter", "smoother", "default"
   )) {
     stop(paste(
-      "theme_trr: plot_type has to be 'defaut', 'bar', 'box', 'lollipop'", 
+      "theme_trr: plot_type has to be 'default', 'bar', 'box', 'lollipop'", 
       "'line', 'scatter' or 'smoother'."
     ))
   }
