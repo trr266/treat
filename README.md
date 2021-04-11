@@ -21,6 +21,9 @@ Then browse around the repository and familiarize yourself with its folders. You
 
 - `doc`: Here you will find two RMarkdown files containing text and program instructions that will become our paper and presentation, by rendering them through the R markdown process and LaTeX.
 
+- `info`: This is a folder that can store additional documentation. In our case
+you will find a RMarkdown file that introduces our TRR 266-themed ggplot theme.
+
 You also see an `output` directory but it is empty. Why? Because you will create the output locally on your computer, if you want.
 
 
@@ -73,7 +76,7 @@ The basic idea is to clone the repository whenever you start a new project. Then
 
 ### For TRR 266 Members: What else is in there for you?
 
-This repository contains three files that TRR members that use R might find particularly useful. The file `code/R/theme_trr.R` features a ggplot theme that makes it easy to generate visuals that comply to the TRR 266 style guide. With the `doc/beamer_theme_trr266.sty` you can beef up your RMarkdown based beamer presentations to our fancy TRR design. Finally, the file `code/R/pull_wrds_data.R` might be useful if you want to learn how to download WRDS data directly from R.
+This repository contains three files that TRR members that use R might find particularly useful. The file `code/R/theme_trr.R` features a ggplot theme that makes it easy to generate visuals that comply to the TRR 266 style guide. The RMarkdown file in `additional_code` takes you through the process. With the `doc/beamer_theme_trr266.sty` you can beef up your RMarkdown based beamer presentations to our fancy TRR design. Finally, the file `code/R/pull_wrds_data.R` might be useful if you want to learn how to download WRDS data directly from R.
 
 
 ### Why do you do abc in a certain way? I like to do things differently!
