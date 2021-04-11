@@ -1,6 +1,6 @@
 ## The TRR 266 Template for Reproducible Empirical Accounting Research 
 
-Welcome! This repository provides an infrastructure for open science oriented empirical projects. It is targeted to the empirical accounting research crowd. It features a toy project exploring discretionary accruals of U.S. public firms and requires access to U.S. Compustat data via WRDS.
+This repository provides an infrastructure for open science oriented empirical projects. It is targeted to the empirical accounting research crowd. It features a toy project exploring discretionary accruals of U.S. public firms and requires access to U.S. Compustat data via WRDS.
 
 But even if you do not care about discretionary accruals (who wouldn't?) or do not have WRDS access, its code base should give you a feel on how the template is supposed to be used and how to structure a reproducible empirical project.
 
@@ -70,7 +70,7 @@ tinytex::install_tinytex()
 
 ### OK. That was fun. Bot how should I use the repo now?
 
-The basic idea is to clone the repository whenever you start a new project. Then delete everything that you don't like and/or need. Over time, as you develop your own preferences, you can fork this repository and adjust it so that it becomes your very own template targeted to your very own preferences.
+The basic idea is to clone the repository whenever you start a new project. If you are using GitHub, the simplest way to do this is to click on "Use this Template" above the file list. Then delete everything that you don't like and/or need. Over time, as you develop your own preferences, you can fork this repository and adjust it so that it becomes your very own template targeted to your very own preferences.
 
 
 ### For TRR 266 Members: What else is in there for you?
