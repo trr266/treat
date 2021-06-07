@@ -100,6 +100,6 @@ var_names <- tibble(
 )
 
 save(
-  list = c("smp_da", "var_names", ls(pattern = "fig_*"), ls(pattern = "tab_*")),
+  list = c("smp_da", "var_names", ls(pattern = "^fig_*"), ls(pattern = "^tab_*")),
   file = "output/results.rda"
 )
