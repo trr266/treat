@@ -47,7 +47,7 @@ ff48 <- read_csv(
   "data/external/fama_french_48_industries.csv", col_types = cols()
 )
 
-us_base_sample <- readRDS("data/pulled/cstat_us_sample.RDS") %>%
+us_base_sample <- readRDS("data/pulled/cstat_us_sample.rds") %>%
   filter(
     indfmt == "INDL",
     fic == "USA",

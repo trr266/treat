@@ -50,6 +50,6 @@ $(PAPER): doc/paper.Rmd doc/references.bib $(RESULTS)
 	mv doc/paper.pdf output
 	rm -f doc/paper.ttt doc/paper.fff
 	
-$(PRESENTATION): doc/presentation.rmd $(RESULTS) doc/beamer_theme_trr266.sty
+$(PRESENTATION): doc/presentation.Rmd $(RESULTS) doc/beamer_theme_trr266.sty
 	$(RSCRIPT) -e 'library(rmarkdown); render("doc/presentation.Rmd")'
 	mv doc/presentation.pdf output

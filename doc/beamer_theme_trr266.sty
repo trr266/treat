@@ -15,7 +15,7 @@
 \ifxetex
   \usepackage{fontspec}
   \defaultfontfeatures{Ligatures=TeX} % To support LaTeX quoting style
-  \setsansfont{Calibri}
+  \IfFontExistsTF{Calibri}{\setsansfont{Calibri}}{\usepackage[sfdefault,lf]{carlito}}
 \else
   \usepackage[T1]{fontenc}
   \usepackage[utf8]{inputenc}
