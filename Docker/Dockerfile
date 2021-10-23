@@ -19,7 +19,7 @@ ADD https://api.github.com/repos/trr266/treat/git/refs/heads/main version.json
 
 RUN cd  /home/rstudio && sudo -H -u rstudio git clone https://github.com/trr266/treat.git
 
-COPY RProfile.R /home/rstudio/.Rprofile
+COPY Docker/RProfile.R /home/rstudio/.Rprofile
 RUN cp /home/rstudio/treat/_config.csv /home/rstudio/treat/config.csv
 
 RUN chown rstudio.rstudio /home/rstudio/.Rprofile
