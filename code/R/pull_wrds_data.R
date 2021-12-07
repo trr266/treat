@@ -3,12 +3,10 @@
 #
 # This code pulls data from WRDS 
 # ------------------------------------------------------------------------------
-
+#
 library(RPostgres)
 library(DBI)
-
-if (!exists("cfg")) source("code/R/read_config.R")
-
+#
 save_wrds_data <- function(df, fname) {
   if(file.exists(fname)) {
     file.rename(
@@ -21,21 +19,11 @@ save_wrds_data <- function(df, fname) {
   }
   saveRDS(df, fname)
 }
-
-# --- Connect to WRDS ----------------------------------------------------------
-
-wrds <- dbConnect(
-  Postgres(),
-  host = 'wrds-pgdata.wharton.upenn.edu',
-  port = 9737,
-  user = cfg$wrds_user,
-  password = cfg$wrds_pwd,
-  sslmode = 'require',
-  dbname = 'wrds'
-)
-
-message("Logged on to WRDS ...")
-
+#
+# --- Connection to WRDS -------------------------------------------------------
+source("code/R/connect_WRDS.R")
+#
+#
 # --- Specify filters and variables --------------------------------------------
 
 dyn_vars <- c(
@@ -85,4 +73,5 @@ wrds_us <- merge(wrds_us_static, wrds_us_dynamic, by="gvkey")
 save_wrds_data(wrds_us, "data/pulled/cstat_us_sample.rds")
 
 dbDisconnect(wrds)
+rm(wrds)
 message("Disconnected from WRDS")
