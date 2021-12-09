@@ -24,11 +24,12 @@ if(file.exists("config.csv")){
 } else if(rstudioapi::isAvailable()) {
     wrds_user <- rstudioapi::askForPassword(prompt="Enter your WRDS username")
     wrds_pwd   <- rstudioapi::askForPassword()
-} else if(!rstudioapi::isAvailable() & !exists("wrds_user") & !exists("wrds_pw")) {
-      stop("missing WRDS credentials. see _config.csv for troubleshooting!")
-} else if(!rstudioapi::isAvailable() & exists("wrds_user") & exists("wrds_pw")) {
-        warning("WRDS credentials wrds_user & wrds_pw were manually set. see _config.csv if connection fails")
-}
+} else if(!rstudioapi::isAvailable()) {
+      stop("
+          cannot establish connection to WRDS (connect_WRDS.R) 
+          - missing WRDS credentials (wrds_user & wrds_pwd)
+          - see _config.csv for troubleshooting")
+} 
 #
 #
 # --- WRDS Connection ----------------------------------------------------------
