@@ -11,12 +11,11 @@ from theme_trr import theme_trr, scale_color_trr266_d, scale_fill_trr266_c
 from utils import setup_logging, read_config
 
 log = setup_logging()
-
+global_cfg = read_config('config/global_cfg.yaml')
 
 def main():
     log.info('Performing main analysis...')
-    cfg = read_config('config/do_analysis_cfg.yaml')
-    smp = pd.read_csv(cfg['acc_sample'], dtype={'gvkey': str})
+    smp = pd.read_parquet(global_cfg['acc_sample'])
 
     fig_boxplot_full = make_boxplot(smp)
 
@@ -89,7 +88,7 @@ def main():
         'Regression': tab_regression,
         'Variable Names': var_names
     }
-    with open(cfg['results'], 'wb') as f:
+    with open(global_cfg['results_python'], 'wb') as f:
         pickle.dump(results, f)
     log.info('Performing main analysis...Done!')
 

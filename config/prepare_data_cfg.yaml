@@ -1,4 +1,0 @@
-fama_french_12: data/external/fama_french_12_industries.csv
-fama_french_48: data/external/fama_french_48_industries.csv
-cstat_us_sample: data/pulled/cstat_us_sample.csv
-acc_sample: data/generated/acc_sample.csv

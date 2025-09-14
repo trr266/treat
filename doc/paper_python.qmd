@@ -44,8 +44,11 @@ header-includes:
 #| output: false
 
 import pickle
+import yaml
 
-with open('../output/results.pickle', 'rb') as f:
+global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
+
+with open('../' + global_cfg['results_python'], 'rb') as f:
         results = pickle.load(f)
 
 min_fyear, max_fyear, no_unique_firms = results['Desc information'].values()

@@ -13,15 +13,15 @@ import pandas as pd
 from utils import read_config, setup_logging
 
 log = setup_logging()
+global_cfg = read_config('config/global_cfg.yaml')
 
 def main():
     log.info("Preparing data for analysis ...")
-    cfg = read_config('config/prepare_data_cfg.yaml')
 
-    ff12 = pd.read_csv(cfg['fama_french_12'], dtype=object)
-    ff48 = pd.read_csv(cfg['fama_french_48'], dtype=object)
+    ff12 = pd.read_csv(global_cfg['fama_french_12'], dtype=object)
+    ff48 = pd.read_csv(global_cfg['fama_french_48'], dtype=object)
 
-    cstat_us_sample = pd.read_csv(cfg['cstat_us_sample'])
+    cstat_us_sample = pd.read_parquet(global_cfg['cstat_us_parquet_file'])
     cstat_us_sample['gvkey'] = cstat_us_sample['gvkey'].astype(str)
 
     us_base_sample = prep_us_base_sample(cstat_us_sample, ff12, ff48)
@@ -36,7 +36,7 @@ def main():
     smp = prep_smp(us_base_sample, mj, dd)
     np.seterr(divide='warn')
 
-    smp.to_csv(cfg['acc_sample'], index=False)
+    smp.to_parquet(global_cfg['acc_sample'], index=False)
 
     log.info("Preparing data for analysis ... Done!")
 

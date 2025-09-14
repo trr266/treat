@@ -12,6 +12,7 @@ from utils import read_config, setup_logging
 import wrds
 
 log = setup_logging()
+global_cfg = read_config('config/global_cfg.yaml')
 
 def main():
     '''
@@ -21,18 +22,18 @@ def main():
 
     The data is then saved to a csv file.
     '''
-    cfg = read_config('config/pull_data_cfg.yaml')
+    cfg = read_config('config/pull_wrds_data_cfg.yaml')
     wrds_login = get_wrds_login()
     wrds_us = pull_wrds_data(cfg, wrds_login)
-    wrds_us.to_csv(cfg['cstat_us_sample_save_path'], index=False)
+    wrds_us.to_parquet(global_cfg['cstat_us_parquet_file'], index=False)
 
     
 def get_wrds_login():
     '''
     Gets the WRDS login credentials.
     '''
-    if os.path.exists('secrets.env'):
-        dotenv.load_dotenv('secrets.env')
+    if os.path.exists(global_cfg['secrets_file']):
+        dotenv.load_dotenv(global_cfg['secrets_file'])
         wrds_username = os.getenv('WRDS_USERNAME')
         wrds_password = os.getenv('WRDS_PASSWORD')
         return {'wrds_username': wrds_username, 'wrds_password': wrds_password}
@@ -47,7 +48,8 @@ def pull_wrds_data(cfg, wrds_authentication):
     Pulls WRDS access data.
     '''
     db = wrds.Connection(
-        wrds_username=wrds_authentication['wrds_username'], wrds_password=wrds_authentication['wrds_password']
+        wrds_username=wrds_authentication['wrds_username'], 
+        wrds_password=wrds_authentication['wrds_password']
     )
 
     log.info('Logged on to WRDS ...')

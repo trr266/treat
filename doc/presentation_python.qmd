@@ -8,7 +8,7 @@ pdf-engine: xelatex # pdflatex creates rastered fonts
 format: 
   beamer:
     slide-level: 3
-    number-sections: true
+    number-sections: false
     toc: false
 header-includes:
 - \usepackage{booktabs} 
@@ -22,8 +22,11 @@ header-includes:
 #| output: false
 
 import pickle
+import yaml
 
-with open('../output/results.pickle', 'rb') as f:
+global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
+
+with open('../' + global_cfg['results_python'], 'rb') as f:
         results = pickle.load(f)
 
 min_fyear, max_fyear, no_unique_firms = results['Desc information'].values()
@@ -36,7 +39,6 @@ def rename_var_to_label(table, italic=True):
     return table
 ```
 
-\pagebreak
 
 # Motivation
 
@@ -94,6 +96,7 @@ results['fig_boxplot_full']
 #| label: fig-boxplot_smp
 #| fig-cap: "Distribution of Discretionary Accruals over Time - analysis sample"
 #| echo: false
+
 results['fig_boxplot_smp'].set_figheight(2.6)
 results['fig_boxplot_smp']
 ```
@@ -105,8 +108,9 @@ results['fig_boxplot_smp']
 #| label: fig-scatter_md_dd
 #| fig-cap: "Correlation of Modified Jones with Dechow and Dichev DA"
 #| echo: false
+
 results['fig_scatter_md_dd'].set_figheight(3)
-results['fig_scatter_md_dd']
+display(results['fig_scatter_md_dd'])
 ```
 
 
@@ -119,6 +123,7 @@ results['fig_scatter_md_dd']
 
 results['fig_scatter_dd_lnta'].set_figheight(3)
 results['fig_scatter_dd_lnta']
+
 ```
 
 ### No presentation without correlation table...

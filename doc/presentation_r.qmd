@@ -2,14 +2,14 @@
 title: "Exploring Discretionary Accruals"
 author: "Joachim Gassen"
 institute: "TRR 266 Accounting for Transparency"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: today
 fontsize: "9pt"
-output: 
-  beamer_presentation: 
-    latex_engine: xelatex # pdflatex creates rastered fonts
-    slide_level: 3
-
-        
+pdf-engine: xelatex # pdflatex creates rastered fonts
+format: 
+  beamer:
+    slide-level: 3
+    number-sections: false
+    toc: false
 header-includes:
 - \usepackage{booktabs} 
 - \usepackage{threeparttable}

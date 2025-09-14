@@ -164,3 +164,7 @@ cython_debug/
 
 # Config file - potentially containing private data
 secrets.env
+/.quarto/
+
+# Other stuff
+.DS_Store

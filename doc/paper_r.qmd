@@ -2,33 +2,27 @@
 title: |
   | Exporing Discretionary Accruals: 
   | A Stub Project^[I acknowledge financial support from Deutsche Forschungsgemeinschaft-Project-ID 403041268 - TRR 266.] \vspace{1cm}
-
 author: |
   | Joachim Gassen 
   | TRR 266 Accounting for Transparency
   | Humboldt-Universität zu Berlin 
   | gassen@wiwi.hu-berlin.de
-
-date: |
-  | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %e, %Y'); Sys.setlocale("LC_TIME", loc); fdate` \vspace{1cm}
-  
+date: today
+date-format: MMM D, YYYY [\vspace{1cm}]
 abstract: |
   | The Open Science movement promotes the accessibility and reusability of research. This repository has the objective to help researchers establishing such an collaboration-oriented workflow. It uses a toy project on discretionary accruals for demonstration. 
   | \vspace{6cm}
-
 bibliography: references.bib
 biblio-style: apsr
-
-output:
-  pdf_document: 
-    number_sections: true
-  toc: no
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+    toc: false
 fig_caption: yes
 fontsize: 11pt
 ident: yes
-
 always_allow_html: yes
-
 header-includes:
   - \usepackage[nolists]{endfloat}    
   - \usepackage{setspace}\doublespacing
@@ -42,6 +36,7 @@ header-includes:
   - \usepackage{adjustbox}
   - \usepackage{graphicx}
   - \usepackage{csquotes}
+  - \usepackage[margin=1in]{geometry}
 ---
 
 ```{r setup, message=FALSE, warning=FALSE, include=FALSE}
