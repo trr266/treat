@@ -2,7 +2,12 @@
 // README at: https://github.com/rocker-org/devcontainer-templates/tree/main/src/r-ver
 {
 	"name": "eval_tutorlain_rver_4.5",
-	"build": { "dockerfile": "Dockerfile" },
+	"build": { 
+		"dockerfile": "Dockerfile",
+		"args": { 
+			"BUILDKIT_INLINE_CACHE": "0"
+		}
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
