@@ -9,8 +9,7 @@
 \RequirePackage{etoolbox}
 \RequirePackage{cmbright}
 \RequirePackage{kvoptions}
-%\RequirePackage{xparse}
-
+\RequirePackage[absolute,overlay]{textpos}
 \usepackage{ifxetex}
 \ifxetex
   \usepackage{fontspec}
@@ -68,6 +67,7 @@
 %	\setbeamercolor*{date}{fg=petroltrr}
 %\else%
 \setbeamercolor*{title}{fg=white, bg=petroltrr}
+\setbeamercolor*{subtitle}{fg=white, bg=petroltrr}
 \setbeamercolor*{title page header}{fg=white, bg=petroltrr}
 \setbeamercolor*{author}{fg=lightpetroltrr!25}
 \setbeamercolor*{institute}{fg=lightpetroltrr!25}
@@ -92,7 +92,7 @@
 \setbeamercolor*{section in toc}{fg=petroltrr}
 \setbeamercolor*{block title}{fg=petroltrr}
 \setbeamercolor*{block body}{fg=lightpetrol!30}
-
+\setbeamercolor*{button}{bg=lightpetroltrr!50,fg=white}
 \hypersetup{colorlinks=true,urlcolor=lightbluetrr,linkcolor=petroltrr}
 
 % Framed blocks
@@ -107,7 +107,7 @@
 <all>
 
 \setbeamertemplate{navigation symbols}{}
-\setbeamertemplate{blocks}[rounded][shadow=true]  
+\setbeamertemplate{blocks}[rounded][shadow=true]
 
 \setbeamertemplate{footline}[page number]{}
 
@@ -122,49 +122,52 @@
 \setbeamertemplate{background}{
   \begin{tikzpicture}
   \useasboundingbox (0,0) rectangle(\the\paperwidth,\the\paperheight);
-  \fill[color=petroltrr] (0,1.9) rectangle (\the\paperwidth,\the\paperheight);
-  \fill[color=lightpetroltrr] (0,0) rectangle(2,1.8);
-  \fill[color=darkgreentrr!90] (2.1,0) rectangle(\the\paperwidth,1.8);
+  \fill[color=petroltrr] (0,2) rectangle (\the\paperwidth,\the\paperheight);
+  \fill[color=lightpetroltrr] (0,0) rectangle(1.9, 1.9);
+  \fill[color=darkgreentrr!90] (2,0) rectangle(\the\paperwidth, 1.9);
   \ifnum\thepage>1\relax%
    \fill[white,opacity=1] (0,0) rectangle(\the\paperwidth,\the\paperheight);
    \fi
   \end{tikzpicture}
 }
 
+% Button place command
 
-
+\newcommand{\placebutton}[3]{%
+	\begin{tikzpicture}[remember picture, overlay]
+		\node[anchor=south west, shift={(0.25cm,0.25cm)}]() at (current page.south west){%
+          \hyperlink{#2}{%
+              \ifstrequal{#1}{return}{\beamerreturnbutton{#3}}{}%
+              \ifstrequal{#1}{skip}{\beamerskipbutton{#3}}{}%
+          }
+		};
+	\end{tikzpicture}
+}
 
 % Title page
 \defbeamertemplate*{title page}{trr266}[1][]
-{ 
-		\begin{tikzpicture}
-%			\fill[color=petroltrr] ($(0,\the\paperheight)+(0,-1.825cm)$) rectangle (\the\paperwidth,\the\paperheight);
-%		\fill[color=lightpetroltrr!25] (-0.5*\the\paperwidth,.6cm) rectangle (\the\paperwidth,1.6cm);
-%			\fill[color=lightpetroltrr!55] (0,0) rectangle (\the\paperwidth,.6cm);
-%			\node[outer sep=0cm, inner sep=0cm, anchor=south, font=\tiny, petroltrr] at (-0.5*\the\paperwidth,0.2)
-%				{Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) –-
-%				Project-ID 403041268 – TRR 266};
-			\node[outer sep=0cm, inner sep=0cm, anchor=north] at (-0.5*\the\paperwidth,\the\paperheight) 
-				{\includegraphics[keepaspectratio, height=1.5cm]{trr266_logo.eps}};
-		\end{tikzpicture}
-  \vskip1.5cm%
-    \begin{beamercolorbox}[wd=12cm,leftskip=1cm,#1]{title page header}
-      \usebeamerfont{title}\inserttitle\par%
-    \end{beamercolorbox}%
-    \vskip.35cm%
-    \begin{beamercolorbox}[wd=12cm,leftskip=1cm,sep=1pt,#1]{author}
-      \usebeamerfont{author}\insertauthor%
-    \end{beamercolorbox}
-     \vskip3.5cm%
-    \begin{beamercolorbox}[wd=12cm,leftskip=2cm,#1]{institute}
-      \usebeamerfont{author}\insertinstitute%
-    \end{beamercolorbox}
-     \vskip.1cm%
-    \begin{beamercolorbox}[wd=12cm,leftskip=2cm,#1]{date}
-      \usebeamerfont{author}\insertdate%
-    \end{beamercolorbox}
+{
+	\begin{textblock*}{\textwidth}(0.1\textwidth,0.1\textheight)
+		\includegraphics[keepaspectratio, height=1.5cm]{trr266_logo.eps}
+	\end{textblock*}
+	\begin{textblock*}{\textwidth}(0.1\textwidth,0.4\textheight)
+		\begin{beamercolorbox}[#1]{title page header}
+		 	\usebeamerfont{title}\inserttitle\par%
+  	\end{beamercolorbox}
+	\end{textblock*}
+	\begin{textblock*}{\textwidth}(0.1\textwidth,0.6\textheight)
+  	\begin{beamercolorbox}[sep=1pt,#1]{author}
+  		\usebeamerfont{author}\insertauthor\par%
+			\usebeamerfont{author}\insertinstitute%
+  	\end{beamercolorbox}
+	\end{textblock*}
+	\begin{textblock*}{\textwidth}(0.2\textwidth,0.9\textheight)
+		\begin{beamercolorbox}[sep=1pt,#1]{date}
+  		\usebeamerfont{subtitle}\insertsubtitle\par%
+  		\usebeamerfont{author}\insertdate%
+  	\end{beamercolorbox}
+	\end{textblock*}
   \vfil
-
 }
 
 % Items
@@ -181,7 +184,7 @@
 \defbeamertemplate*{frametitle}{trr266}[1][]
 {
 \vskip1cm%
-  \begin{beamercolorbox}[wd=\paperwidth,ht=0.5cm]{frametitle} 
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.5cm]{frametitle}
   \begin{tikzpicture}
   \useasboundingbox[fill=white](0,0) rectangle(\the\paperwidth,0.5);
   \fill[lightpetroltrr!50] (0,0) rectangle(2,1.2);

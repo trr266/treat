@@ -14,9 +14,9 @@ RUN apt-get update \
 
 # R packages
 RUN install2.r --error --skipinstalled \
-      tidyverse rmarkdown knitr kableExtra modelsummary gt languageserver \
-      fixest glue logger dotenv readxl ggbeeswarm devtools RPostgres \
-      ExPanDaR colorspace hms duckdb yaml arrow \
+      tidyverse rmarkdown modelsummary gt languageserver \
+      fixest glue logger dotenv ggbeeswarm devtools \
+      colorspace hms duckdb yaml arrow \
   && Rscript -e "install.packages('vscDebugger', repos='https://manuelhentschel.r-universe.dev')" \
   && rm -rf /tmp/downloaded_packages
 

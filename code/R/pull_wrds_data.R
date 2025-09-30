@@ -1,18 +1,13 @@
 # ------------------------------------------------------------------------------
-# Downloads WRDS data to local parquet files using a duckdb/postgres workflow
+# Downloads WRDS data to local parquet files using a duckdb workflow
 #
-# See LICENSE file for licensing
+# See LICENSE file for licensing information.
 # ------------------------------------------------------------------------------
 
 # Good starting points to learn more about this workflow are
 # - The support pages of WRDS (they also contain the data documentation)
 # - The wonderful textbook by Ian Gow (https://iangow.github.io/far_book/),
 #   in particular App. D and E
-
-suppressWarnings(suppressPackageStartupMessages({
-  library(duckdb)
-  library(hms)
-}))
 
 source("code/R/utils.R")
 cfg <- read_config("config/pull_wrds_data_cfg.yaml")

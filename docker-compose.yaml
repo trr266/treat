@@ -1,7 +1,0 @@
-services:
-  proj:
-    build:
-      context: .
-      dockerfile: python_dockerfile
-    volumes:
-      - ./output:/proj/output

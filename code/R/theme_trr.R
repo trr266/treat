@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
-# Some utility functions and our TRR 266 ggplot2 Theme
+# Our TRR 266 ggplot2 Theme
 #
-# (c) TRR 266 - Read LICENSE for details
+# See LICENSE file for licensing information.
 # ------------------------------------------------------------------------------
 
 theme_trr <- function(

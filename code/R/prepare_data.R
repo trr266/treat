@@ -1,25 +1,16 @@
-# --- Header -------------------------------------------------------------------
-# Prepares the "Explore Discretionary Accruals" display
-#
-# (C) TRR 266 -  See LICENSE file for details 
 # ------------------------------------------------------------------------------
-suppressWarnings(suppressPackageStartupMessages({
-  library(readr)
-  library(dplyr)
-  library(tidyr)
-  library(ggplot2)
-  library(purrr)
-  library(modelr)
-  library(broom)
-  library(lubridate)
-  library(ExPanDaR)
-  library(arrow)
-}))
+# Calculates modified Jones and Dechow/Dichev discretionary accruals and
+# prepares final sample for analysis.
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
 
 # --- Read config and utility functions ----------------------------------------
 
 source("code/R/utils.R")
 
+
+# --- Some helper functions ----------------------------------------------------
 
 accrual_model_mjones <- function(df) {
   lm(tacc ~ inverse_a + drev + ppe, data = df)
