@@ -101,7 +101,7 @@ You can find the list of required Python packages in the `requirements.txt` file
 
 ## Repository Content
 
-Browse around the repository and familiarize yourself with its folders. You will quickly see that there are three folders that have files in them:
+Browse around the repository and familiarize yourself with its folders. You will quickly see that there are several folders:
 
 - `config`: This directory holds configuration files that are being called by the code files in the `code` directory. We try to keep the configurations separate from the code to make it easier to adjust the workflow to your needs.
 
@@ -109,7 +109,7 @@ Browse around the repository and familiarize yourself with its folders. You will
 
 - `data`: A directory where data is stored. You will see that it again contains sub-directories and a README file that explains their purpose. You will also see that in the `external` sub-directory there are two data files. Again, the README file explains their content.
 
-- `doc`: Here you will find Quarto files containing text and program instructions that will become our paper and presentation. Again, there is a Python and an R vrariant.
+- `doc`: Here you will find Quarto files containing text and program instructions that will become our paper and presentation. Again, there is a Python and an R variant.
 
 - `info`: This is a folder that can store additional documentation. In our case you will find a RMarkdown file that introduces our TRR 266-themed ggplot theme.
 
@@ -121,7 +121,7 @@ Assuming that you have WRDS access to Compustat North America, this should be re
 
 1.  Create a virtual environment for the project. You can do this by running `python3 -m venv .venv` in the terminal. This will create a virtual environment in the `.venv` directory. You can activate the virtual environment by running `source .venv/bin/activate` on MacOS or Linux or `.\.venv\Scripts\activate` on Windows. You can deactivate the virtual environment by running `deactivate`.
 2.  With an active virtual environment, you can install the required packages by running `pip install -r requirements.txt` in the terminal. This will install the required Python packages for the project.
-3.  Copy the file \_secrets.env to secrets.env in the project main directory. Edit it by adding your WRDS credentials.
+3.  Copy the file `_secrets.env` to `secrets.env` in the project main directory. Edit it by adding your WRDS credentials.
 4.  Run ‘make all’ via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R (please note: The python-only pipeline is currently somewhat broken but will be fixed ‘soon’).
 5.  Eventually, you will be greeted with two files in the output directory: `treat_paper.pdf` and `treat_presentation.pdf`. Congratulations! You have successfully used an open science resource and reproduced our “analysis”. Now modify it and make it your own project!
 

@@ -63,7 +63,7 @@ You can find the list of required Python packages in the `requirements.txt` file
 
 ## Repository Content
 
-Browse around the repository and familiarize yourself with its folders. You will quickly see that there are three folders that have files in them:
+Browse around the repository and familiarize yourself with its folders. You will quickly see that there are several folders:
 
 - `config`: This directory holds configuration files that are being called by the code files in the `code` directory. We try to keep the configurations separate from the code to make it easier to adjust the workflow to your needs.
 
@@ -71,7 +71,7 @@ Browse around the repository and familiarize yourself with its folders. You will
 
 - `data`: A directory where data is stored. You will see that it again contains sub-directories and a README file that explains their purpose. You will also see that in the `external` sub-directory there are two data files. Again, the README file explains their content.
 
-- `doc`: Here you will find Quarto files containing text and program instructions that will become our paper and presentation. Again, there is a Python and an R vrariant.
+- `doc`: Here you will find Quarto files containing text and program instructions that will become our paper and presentation. Again, there is a Python and an R variant.
 
 - `info`: This is a folder that can store additional documentation. In our case you will find a RMarkdown file that introduces our TRR 266-themed ggplot theme.
 
