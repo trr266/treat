@@ -16,7 +16,7 @@ log = setup_logging()
 global_cfg = read_config('config/global_cfg.yaml')
 
 def main():
-    log.info("Preparing data for analysis ...")
+    log.info("Preparing base sample ...")
 
     ff12 = pd.read_csv(global_cfg['fama_french_12'], dtype=object)
     ff48 = pd.read_csv(global_cfg['fama_french_48'], dtype=object)
@@ -29,16 +29,19 @@ def main():
     dup_obs = us_base_sample[us_base_sample.duplicated()]
     assert dup_obs.shape[0] == 0, "Duplicate firm-year observations in Compustat data, stored in 'dup_obs'."
 
+    log.info("Calculating modified Jones discretionary accruals ...")
     mj = estimate_mj_accruals(us_base_sample)
+
+    log.info("Calculating Dechow and Dichev discretionary accruals ...")
     dd = estimate_dd_accruals(us_base_sample)
 
+    log.info("Merging data and preparing final sample ...")
     np.seterr(divide='ignore')  # because np.log(0) throws a warning
     smp = prep_smp(us_base_sample, mj, dd)
     np.seterr(divide='warn')
 
     smp.to_parquet(global_cfg['acc_sample'], index=False)
-
-    log.info("Preparing data for analysis ... Done!")
+    log.info(f"Final sample saved to '{global_cfg['acc_sample']}'.")
 
 
 def prep_us_base_sample(df, ff12, ff48):

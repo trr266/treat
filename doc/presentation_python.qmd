@@ -2,7 +2,8 @@
 title: "Exploring Discretionary Accruals"
 author: "Joachim Gassen"
 institute: "TRR 266 Accounting for Transparency"
-date: today
+date: last-modified
+date-format: long
 fontsize: "9pt"
 pdf-engine: xelatex # pdflatex creates rastered fonts
 format: 
@@ -10,19 +11,27 @@ format:
     slide-level: 3
     number-sections: false
     toc: false
+classoption: "aspectratio=169"
+execute:
+  echo: false
+  message: false
+  warning: false
 header-includes:
 - \usepackage{booktabs} 
 - \usepackage{threeparttable}
 - \usepackage{graphicx}
-- \input{beamer_theme_trr266.sty}
+- \input{beamer_theme_trr266_16x9.sty}
 ---
 
+
 ```{python}
-#| echo: false
 #| output: false
 
 import pickle
 import yaml
+# Not sure why one needs this, but without it, the plots do not show in the PDF
+import matplotlib.pyplot as plt
+plt.show()
 
 global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
 
@@ -56,7 +65,6 @@ def rename_var_to_label(table, italic=True):
 ### Data
 
 ```{python}
-#| echo: false
 #| output: asis
 
 lat_tab = rename_var_to_label(results['Descriptive Statistics']).split('\n')
@@ -84,7 +92,7 @@ print('\n'.join([
 ```{python}
 #| label: fig-boxplot_full
 #| fig-cap: "Distribution of Discretionary Accruals over time - unrestricted sample"
-#| echo: false
+
 results['fig_boxplot_full'].set_figheight(2.6)
 results['fig_boxplot_full']
 ```
@@ -95,7 +103,6 @@ results['fig_boxplot_full']
 ```{python}
 #| label: fig-boxplot_smp
 #| fig-cap: "Distribution of Discretionary Accruals over Time - analysis sample"
-#| echo: false
 
 results['fig_boxplot_smp'].set_figheight(2.6)
 results['fig_boxplot_smp']
@@ -107,10 +114,9 @@ results['fig_boxplot_smp']
 ```{python}
 #| label: fig-scatter_md_dd
 #| fig-cap: "Correlation of Modified Jones with Dechow and Dichev DA"
-#| echo: false
 
 results['fig_scatter_md_dd'].set_figheight(3)
-display(results['fig_scatter_md_dd'])
+results['fig_scatter_md_dd']
 ```
 
 
@@ -119,18 +125,15 @@ display(results['fig_scatter_md_dd'])
 ```{python}
 #| label: fig-scatter_dd_lnta
 #| fig-cap: "Dechow and Dichev DA and Firm Size"
-#| echo: false
 
 results['fig_scatter_dd_lnta'].set_figheight(3)
 results['fig_scatter_dd_lnta']
-
 ```
 
 ### No presentation without correlation table...
 
 
 ```{python}
-#| echo: false
 #| output: asis
 
 lat_tab = rename_var_to_label(results['Correlations'], False).split('\n')
@@ -151,7 +154,6 @@ print('\n'.join([
 ### ... and regression table
 
 ```{python}
-#| echo: false
 #| output: asis
 
 print('\n'.join([

@@ -14,12 +14,13 @@ log = setup_logging()
 global_cfg = read_config('config/global_cfg.yaml')
 
 def main():
-    log.info('Performing main analysis...')
+    log.info("Reading and preparing data...")
     smp = pd.read_parquet(global_cfg['acc_sample'])
+    smp_da = prep_smp_da(smp)
 
+    log.info("Preparing figures...")
     fig_boxplot_full = make_boxplot(smp)
 
-    smp_da = prep_smp_da(smp)
 
     fig_boxplot_smp = make_boxplot(smp_da)
 
@@ -38,6 +39,8 @@ def main():
         smp_da, 'sales_growth', 'dd_da', 'Sales Growth', 'Dechow and Dichev DA'
     )
 
+
+    log.info("Preparing tables...")
     tab_desc_stat = prepare_descriptive_table(smp_da.drop(['fyear'], axis=1))
 
     desc_info = {
@@ -88,9 +91,9 @@ def main():
         'Regression': tab_regression,
         'Variable Names': var_names
     }
+    log.info(f"Done. Storing output objects in '{global_cfg['results_r']}'")
     with open(global_cfg['results_python'], 'wb') as f:
         pickle.dump(results, f)
-    log.info('Performing main analysis...Done!')
 
 
 def make_boxplot(df):

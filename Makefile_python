@@ -70,12 +70,12 @@ $(RESULTS): code/python/do_analysis.py $(GENERATED_DATA) $(CONFIG) \
 # Recipes for final targets
 
 $(PAPER): doc/paper_python.qmd doc/references.bib $(RESULTS)
-	quarto render doc/paper_python.qmd --quiet 
+	quarto render doc/paper_python.qmd --quiet --execute
 	mv output/paper_python.pdf $(PAPER)
 	rm -f doc/paper_python.ttt doc/paper_python.fff
 
 $(PRESENTATION): doc/presentation_python.qmd $(RESULTS) \
 	doc/beamer_theme_trr266.sty
-	quarto render doc/presentation_python.qmd --quiet
+	quarto render doc/presentation_python.qmd --quiet --execute
 	mv output/presentation_python.pdf $(PRESENTATION)
 	rm -rf output/presentation_python_files

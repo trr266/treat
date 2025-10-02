@@ -46,6 +46,10 @@ header-includes:
 import pickle
 import yaml
 
+# Not sure why one needs this, but without it, the plots do not show in the PDF
+import matplotlib.pyplot as plt
+plt.show()
+
 global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
 
 with open('../' + global_cfg['results_python'], 'rb') as f:
@@ -105,18 +109,18 @@ lat_tab[-4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
 
 print('\n'.join([
     '\\begin{table}[!htbp]',  
-    '\caption{\label{tab:descriptives}Descriptive Statistics}',
-    '\label{tab:tab-descriptives-sample}',
+    '\\caption{\\label{tab:descriptives}Descriptive Statistics}',
+    '\\label{tab:tab-descriptives-sample}',
     '\\begin{adjustbox}{width=\\textwidth}',
     '\\begin{threeparttable}',
     '\n'.join(lat_tab[3:-2]),
     '\\begin{tablenotes}[flushleft]',
-    '\setlength{\labelsep}{0pt}',
+    '\\setlength{\\labelsep}{0pt}',
     '\\footnotetext',
     f'\\item Note: The data is obtained from the Compustat U.S. as provided by WRDS. The sample covers the period {int(min_fyear)} to {int(max_fyear)} and {no_unique_firms:,} unique firms.',
-    '\end{tablenotes}',
-    '\end{threeparttable}',
-    '\end{adjustbox}',
+    '\\end{tablenotes}',
+    '\\end{threeparttable}',
+    '\\end{adjustbox}',
     '\\end{table}',
 ]))
 ```
@@ -135,11 +139,11 @@ lat_tab[14] = '\\begin{tablenotes}[flushleft]'
 
 print('\n'.join([
     "\\begin{table}[!htbp]",
-    "\centering",
-    "\caption{\label{tab:CorrTable}Correlations}",
-    '\label{tab:corr}',
+    "\\centering",
+    "\\caption{\\label{tab:CorrTable}Correlations}",
+    '\\label{tab:corr}',
     '\n'.join(lat_tab),
-    "\end{table}"
+    "\\end{table}"
 ]))
 ```
 
@@ -150,9 +154,9 @@ print('\n'.join([
 print('\n'.join([
     '\\begin{table}[!htbp] \\centering',
     '\\caption{\\label{tab:reg}Regressions}', 
-    '\label{tab:reg}',
+    '\\label{tab:reg}',
     rename_var_to_label('\n'.join(results['Regression'].split('\n')[3:-1])),
-    "\end{table}"
+    "\\end{table}"
 ]))
 ```
 
