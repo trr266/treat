@@ -2,7 +2,7 @@
 
 - [X] R: Remove dependency on ExPanDaR. Use fixest and modelsummary instead.
 - [X] Python: The figures are not rendered in the output objects (caused by new quarto version I guess)
-- [ ] Python: The data preparation step currently fails on GitHub Codespaces (memory issue?)
+- [X] Python: The data preparation step currently fails on GitHub Codespaces (memory issue - fixed by requiring 16GB runners)
 - [ ] Python: The R2s reported in the regression table look off and do not match the R findings
 - [ ] Python: What about singletons? Compare to R table.
 - [ ] Python: Rewrite WRDS code to use duckdb. Or, alternatively, use SQL query to merge data server side like in R code. Do we really need the WRDS package? It seems opinonated and not very flexible (password management).
