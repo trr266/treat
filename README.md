@@ -122,7 +122,7 @@ Assuming that you have WRDS access to Compustat North America, this should be re
 1.  Create a virtual environment for the project. You can do this by running `python3 -m venv .venv` in the terminal. This will create a virtual environment in the `.venv` directory. You can activate the virtual environment by running `source .venv/bin/activate` on MacOS or Linux or `.\.venv\Scripts\activate` on Windows. You can deactivate the virtual environment by running `deactivate`.
 2.  With an active virtual environment, you can install the required packages by running `pip install -r requirements.txt` in the terminal. This will install the required Python packages for the project.
 3.  Copy the file `_secrets.env` to `secrets.env` in the project main directory. Edit it by adding your WRDS credentials.
-4.  Run ‘make all’ via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R.
+4.  Run `make all` via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R.
 5.  Eventually, you will be greeted with two files in the output directory: `treat_paper.pdf` and `treat_presentation.pdf`. Congratulations! You have successfully used an open science resource and reproduced our “analysis”. Now modify it and make it your own project!
 
 ## OK. That was fun. Bot how should I use the repo now?
