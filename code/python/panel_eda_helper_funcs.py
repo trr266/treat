@@ -4,7 +4,7 @@ import string
 import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr, pearsonr
-from linearmodels import PanelOLS
+from pyfixest.estimation import feols
 
 
 def prepare_descriptive_table(df, precision=3):
@@ -79,12 +79,13 @@ def escape_for_latex(x: str):
 
 class PrepareRegressionTable:
     '''
-    Prepares a regression table for the given dataframe.
+    Prepares a regression table for the given dataframe using pyfixest.
 
     parameters:
     ----------
     df : pd.DataFrame
         A pandas dataframe with the data to be used for estimating the models.
+        Must have a MultiIndex with entity and time dimensions.
     dvs: list[str]
         A list of the dependent variables to be used for estimating the models.
     id_vars: list[list[str]]
@@ -122,10 +123,10 @@ class PrepareRegressionTable:
         byvar: str = ''
     ) -> None:
 
-        self.df = df
+        self.df = df.reset_index()  # pyfixest needs regular DataFrame
         self.dvs = dvs
         self.idvs = idvs
-        self.entity, self.time = self.df.index.names
+        self.entity, self.time = df.index.names
         self.len = len(dvs)
 
         self.entity_effects = [False] * len(dvs) \
@@ -166,10 +167,11 @@ class PrepareRegressionTable:
         self.pvalues = self._get_stat('pvalues')
         self.estimator = self._get_stat('name')
         self.nobs = self._get_stat('nobs')
-        self.rsquared = self._get_stat('rsquared')
-        self.rsquared_between = self._get_stat('rsquared_between')
-        self.rsquared_within = self._get_stat('rsquared_within')
-        self.rsquared_overall = self._get_stat('rsquared_overall')
+        self.nobs_orig = self._get_stat('nobs_orig')
+        self.singletons = self._get_stat('singletons')
+        self.rsquared_adj = self._get_stat('rsquared_adj')
+        self.rsquared_adj_within = self._get_stat('rsquared_adj_within')
+        
         self.latex_table = '\n'.join([
             '\\begin{table}[!htbp] \\centering',
             ' \\caption{}',
@@ -177,21 +179,20 @@ class PrepareRegressionTable:
             f'\\begin{{tabular}}{{@{{\\extracolsep{{5pt}}}}l{"c" * self.len}}}',
             '\\\\[-1.8ex]\\hline \n\\hline \\\\[-1.8ex]',
             f' & \\multicolumn{{{str(len(self.results))}}}{{c}}{{\\textit{{Dependent variable:}}}} \\\\',
-            f'\\cline{{{"{}-{}".format(len(self.results), len(self.results)+1) if len(self.results) > 1 else 2}}}',
+            f'\\cline{{{"{}-{}".format(2, len(self.results)+1)}}}',
             f'\\\\[-1.8ex] & {" & ".join(escape_for_latex(dv) for dv in self.dvs)} \\\\',
             '\\\\[-1.8ex] &  ' +
             ' & '.join(f'({i+1})' for i in range(self.len)) + '\\\\',
             '\\hline \\\\[-1.8ex]',
             self.params_latex(),
             '\\hline \\\\[-1.8ex]',
-            f'Estimator & {" & ".join(self.estimator.to_list())} \\\\',
-            f'Fixed effects & {" & ".join(self.fe_str)} \\\\',
-            f'Std. errors clustered & {" & ".join(self.cl_str)} \\\\',
-            f'Observations & {" & ".join(f"{x: ,}" for x in self.nobs)} \\\\',
-            f'$R^{{2}}$ & {" & ".join(f"{x: .3}" for x in self.rsquared)} \\\\',
-            f'$R^{{2}}$ (between) & {" & ".join(f"{x: .3}" for x in self.rsquared_between)} \\\\',
-            f'$R^{{2}}$ (within) & {" & ".join(f"{x: .3}" for x in self.rsquared_within)} \\\\',
-            f'$R^{{2}}$ (overall) & {" & ".join(f"{x: .3}" for x in self.rsquared_overall)} \\\\',
+            f'Observations & {" & ".join(f"{x:,}" for x in self.nobs_orig)} \\\\',
+            f'Singletons dropped & {" & ".join(f"{x:,}" for x in self.singletons)} \\\\',
+            f'Observations used & {" & ".join(f"{x:,}" for x in self.nobs)} \\\\',
+            f'Fixed Effects & {" & ".join(self.fe_str)} \\\\',
+            f'SE Clustered & {" & ".join(self.cl_str)} \\\\',
+            f'Adj. R² (overall) & {" & ".join(f"{x:.3f}" for x in self.rsquared_adj)} \\\\',
+            f'Adj. R² (within) & {" & ".join(f"{x:.3f}" for x in self.rsquared_adj_within)} \\\\',
             '\\hline',
             '\\hline \\\\[-1.8ex]',
             f'\\textit{{Note:}} & \\multicolumn{{{str(len(self.results))}}}{{r}}{{$^{{*}}$p$<$0.1; $^{{**}}$p$<$0.05; $^{{***}}$p$<$0.01}} \\\\',
@@ -201,48 +202,140 @@ class PrepareRegressionTable:
 
     @property
     def fe_str(self):
-        fe_strs = [f'{self.entity * e} {self.time * t}' for e,
-                   t in zip(self.entity_effects, self.time_effects)]
-        return [fe_str.strip().replace(' ', ', ') for fe_str in fe_strs]
+        fe_list = []
+        for e, t in zip(self.entity_effects, self.time_effects):
+            if e and t:
+                fe_list.append("Firm and Year")
+            elif e:
+                fe_list.append("Firm")
+            elif t:
+                fe_list.append("Year")
+            else:
+                fe_list.append("")
+        return fe_list
 
     @property
     def cl_str(self):
-        cl_strs = [f'{self.entity * e} {self.time * t}' for e,
-                   t in zip(self.cluster_entity, self.cluster_time)]
-        return [cl_str.strip().replace(' ', ', ') for cl_str in cl_strs]
+        cl_list = []
+        for e, t in zip(self.cluster_entity, self.cluster_time):
+            if e and t:
+                cl_list.append("Firm and Year")
+            elif e:
+                cl_list.append("Firm")
+            elif t:
+                cl_list.append("Year")
+            else:
+                cl_list.append("")
+        return cl_list
 
     @property
     def results(self):
         '''
-        Estimates the models for the given arguments.
+        Estimates the models for the given arguments using pyfixest.
         '''
         estimated_models = []
 
         for i in range(len(self.dvs)):
-            res = PanelOLS(
-                dependent=self.df[self.dvs[i]],
-                exog=self.df[self.idvs[i]],
-                entity_effects=self.entity_effects[i],
-                time_effects=self.time_effects[i]
-            ).fit(
-                cov_type='clustered',
-                cluster_entity=self.cluster_entity[i],
-                cluster_time=self.cluster_time[i]
+            formula_parts = [self.dvs[i], "~"]
+            formula_parts.append(" + ".join(self.idvs[i]))
+            
+            fe_parts = []
+            if self.entity_effects[i]:
+                fe_parts.append(self.entity)
+            if self.time_effects[i]:
+                fe_parts.append(self.time)
+            
+            if fe_parts:
+                formula_parts.append("|")
+                formula_parts.append(" + ".join(fe_parts))
+            
+            formula = " ".join(formula_parts)
+            
+            vcov_parts = []
+            if self.cluster_entity[i]:
+                vcov_parts.append(self.entity)
+            if self.cluster_time[i]:
+                vcov_parts.append(self.time)
+            
+            if vcov_parts:
+                vcov = {"CRV1": " + ".join(vcov_parts)}
+            else:
+                vcov = "iid"
+            
+            res = feols(
+                fml=formula,
+                data=self.df,
+                vcov=vcov,
+                fixef_rm='singleton'
             )
+            
             estimated_models.append(res)
 
         return estimated_models
 
     def _get_stat(self, stat):
-        if isinstance(getattr(self.results[0], stat), pd.Series):
-            return pd.DataFrame(
-                [getattr(res, stat).rename(f'Model_{i}') for i, res in enumerate(self.results, 1)]).T
-        elif isinstance(getattr(self.results[0], stat), (int, float, str)):
-            return pd.Series({f'Model_{i}': getattr(res, stat) for i, res in enumerate(self.results, 1)})
-        elif isinstance(getattr(self.results[0], stat), list):
-            return pd.Series(', '.join(getattr(res, stat)) for res in self.results)
+        if stat == 'params':
+            all_params = []
+            for i, res in enumerate(self.results):
+                coef_df = res.coef().reset_index()
+                coef_df.columns = ['variable', f'Model_{i+1}']
+                all_params.append(coef_df)
+            
+            result = all_params[0]
+            for df in all_params[1:]:
+                result = result.merge(df, on='variable', how='outer')
+            
+            result = result.set_index('variable')
+            return result
+        
+        elif stat == 'std_errors':
+            all_se = []
+            for i, res in enumerate(self.results):
+                se_df = res.se().reset_index()
+                se_df.columns = ['variable', f'Model_{i+1}']
+                all_se.append(se_df)
+            
+            result = all_se[0]
+            for df in all_se[1:]:
+                result = result.merge(df, on='variable', how='outer')
+            
+            result = result.set_index('variable')
+            return result
+        
+        elif stat == 'pvalues':
+            all_pval = []
+            for i, res in enumerate(self.results):
+                pval_df = res.pvalue().reset_index()
+                pval_df.columns = ['variable', f'Model_{i+1}']
+                all_pval.append(pval_df)
+            
+            result = all_pval[0]
+            for df in all_pval[1:]:
+                result = result.merge(df, on='variable', how='outer')
+            
+            result = result.set_index('variable')
+            return result
+        
+        elif stat == 'nobs':
+            return pd.Series([res._N for res in self.results])
+        
+        elif stat == 'nobs_orig':
+            return pd.Series([res._N + len(res._na_index) for res in self.results])
+        
+        elif stat == 'singletons':
+            return pd.Series([len(res._na_index) for res in self.results])
+        
+        elif stat == 'rsquared_adj':
+            return pd.Series([res._adj_r2 for res in self.results])
+        
+        elif stat == 'rsquared_adj_within':
+            return pd.Series([res._adj_r2_within for res in self.results])
+        
+        elif stat == 'name':
+            return pd.Series(['OLS' for _ in self.results])
+        
         else:
-            raise TypeError(f'{stat} is not a String, Series or a number')
+            raise ValueError(f'Unknown stat: {stat}')
 
     def _mark_sig(self, i):
         '''

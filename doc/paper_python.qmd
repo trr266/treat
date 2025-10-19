@@ -63,6 +63,14 @@ def rename_var_to_label(table, italic=True):
         var_label = f'\\textit{{{var_label}}}' if italic else var_label
         table = table.replace(var_name, var_label)
     return table
+
+data_note = (
+    f"The data are obtained from Compustat U.S. as provided by WRDS. "
+    f"The sample covers the period {int(min_fyear)} to {int(max_fyear)} and "
+    f"{no_unique_firms:,} unique firms. "
+    f"Variable definitions are provided by code at "
+    f"\\url{{https://github.com/trr266/treat}}."
+)
 ```
 
 \pagebreak
@@ -116,8 +124,8 @@ print('\n'.join([
     '\n'.join(lat_tab[3:-2]),
     '\\begin{tablenotes}[flushleft]',
     '\\setlength{\\labelsep}{0pt}',
-    '\\footnotetext',
-    f'\\item Note: The data is obtained from the Compustat U.S. as provided by WRDS. The sample covers the period {int(min_fyear)} to {int(max_fyear)} and {no_unique_firms:,} unique firms.',
+    '\\item \\emph{Note}: This table provides the sample demographics.',
+    data_note,
     '\\end{tablenotes}',
     '\\end{threeparttable}',
     '\\end{adjustbox}',
@@ -134,15 +142,21 @@ lat_tab = rename_var_to_label(results['Correlations'], False).split('\n')
 lat_tab[2] = '\\\\[-0.9ex]\\hline \\hline \\\\[-0.9ex]'
 lat_tab[4] = '\\hline\\\\[-1.8ex]'
 lat_tab[12] = '\\\\[-0.9ex]\\hline \\hline \\\\[-0.9ex]'
-lat_tab[14] = '\\begin{tablenotes}[flushleft]'
-
 
 print('\n'.join([
     "\\begin{table}[!htbp]",
     "\\centering",
     "\\caption{\\label{tab:CorrTable}Correlations}",
     '\\label{tab:corr}',
-    '\n'.join(lat_tab),
+    '\n'.join(lat_tab[0:14]),
+    '\\begin{tablenotes}[flushleft]',
+    '\\setlength{\\labelsep}{0pt}',
+    '\\item \\emph{Note}: This table provides sample correlations.',
+    'Pearson correlations are above and',
+    'spearman correlations are below the diagonal.',
+    data_note,
+    '\\end{tablenotes}',
+    '\\end{threeparttable}',
     "\\end{table}"
 ]))
 ```
@@ -151,11 +165,23 @@ print('\n'.join([
 #| echo: false
 #| output: asis
 
+reg_lines = results['Regression'].split('\n')[3:-1]
+obs_idx = next(i for i, line in enumerate(reg_lines) if 'Observations' in line)
+reg_lines.insert(obs_idx, '\\midrule')
+
 print('\n'.join([
     '\\begin{table}[!htbp] \\centering',
     '\\caption{\\label{tab:reg}Regressions}', 
     '\\label{tab:reg}',
-    rename_var_to_label('\n'.join(results['Regression'].split('\n')[3:-1])),
+    '\\begin{threeparttable}',
+    rename_var_to_label('\n'.join(reg_lines)),
+    '\\begin{tablenotes}[flushleft]',
+    '\\setlength{\\labelsep}{0pt}',
+    '\\item \\emph{Note}: This table provides the findings from two OLS regressions.',
+    'The dependent variables are as provided in the respective column heads.',
+    data_note,
+    '\\end{tablenotes}',
+    '\\end{threeparttable}',
     "\\end{table}"
 ]))
 ```
