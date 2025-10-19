@@ -23,6 +23,16 @@ def main():
 
     cstat_us_sample = pd.read_parquet(global_cfg['cstat_us_parquet_file'])
     cstat_us_sample['gvkey'] = cstat_us_sample['gvkey'].astype(str)
+    
+    numeric_cols = [
+        'fyear', 'at', 'sale', 'ibc', 'oancf', 'ppegt', 'recch', 
+        'invch', 'apalch', 'txach', 'aoloch', 'csho', 'prcc_f',
+        'ceq', 'lt', 'ppent', 'intan', 'gdwl', 'aqs', 'acqsc',
+        'cogs', 'ib', 'xint'
+    ]
+    for col in numeric_cols:
+        if col in cstat_us_sample.columns:
+            cstat_us_sample[col] = pd.to_numeric(cstat_us_sample[col], errors='coerce')
 
     us_base_sample = prep_us_base_sample(cstat_us_sample, ff12, ff48)
 
