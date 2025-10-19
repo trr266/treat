@@ -1,3 +1,5 @@
+force_redownload: true
+
 dyn_vars:
     - gvkey
     - conm
@@ -73,4 +75,4 @@ stat_vars:
 
 cs_filter: consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='STD' and popsrc='D'
 
-cstat_us_sample_save_path: 'data/pulled/cstat_us_sample.csv'
+

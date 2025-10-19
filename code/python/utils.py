@@ -12,10 +12,21 @@ def setup_logging():
     '''
     Sets up the logging configuration.
     '''
+    cfg = read_config('config/global_cfg.yaml')
+    if cfg.get('log_file').lower() != 'stdout':
+        log_file = cfg.get('log_file', None)
+    else:
+        log_file = None
+    if cfg.get('log_level') != '':
+        log_level = cfg.get('log_level', 'INFO').upper()
+    else:
+        log_level = 'INFO'
+    
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.StreamHandler()],
+        filename=log_file,
+        level=log_level,
+        format="%(levelname)s [%(asctime)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
     )
     log = logging.getLogger(__name__)
     return log
