@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive TZ=UTC LANG=C.UTF-8
 # System dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      cmake git pandoc wget xz-utils rsync python3-venv \
+      cmake git pandoc wget xz-utils rsync curl \
       libxml2-dev libcurl4-openssl-dev libssl-dev libgit2-dev \
       libfontconfig1-dev libharfbuzz-dev libfribidi-dev librsvg2-dev \
       libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
@@ -60,5 +60,7 @@ RUN set -eux; \
   wget -O /usr/local/bin/yq \
     "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ}"; \
   chmod +x /usr/local/bin/yq
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 CMD ["/bin/sh"]

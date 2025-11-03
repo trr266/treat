@@ -10,6 +10,8 @@ secrets.env
 __pycache__/
 .venv
 venv
+treat.egg-info/
+
 
 # R Stuff
 .Rproj.user
