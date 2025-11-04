@@ -1,0 +1,81 @@
+# If you are new to Makefiles: https://makefiletutorial.com
+
+# Config
+
+PYTHON := python
+
+CONFIG := config/global_cfg.yaml
+
+PULL_WRDS_DATA_CFG := config/pull_wrds_data_cfg.yaml
+
+
+# Refer to `config/global_cfg.yaml` for file locations
+
+# Output Targets
+
+PAPER := $(shell yq -r '.output_paper' $(CONFIG))
+
+PRESENTATION :=  $(shell yq -r '.output_presentation' $(CONFIG))
+
+TARGETS :=  $(PAPER) $(PRESENTATION)
+
+
+# Input Targets
+
+SECRETS := $(shell yq -r '.secrets_file' $(CONFIG))
+
+EXTERNAL_DATA := $(shell yq -r '.fama_french_12' $(CONFIG)) \
+	$(shell yq -r '.fama_french_48' $(CONFIG))
+
+WRDS_DATA := $(shell yq -r '.cstat_us_parquet_file' $(CONFIG))
+
+GENERATED_DATA := $(shell yq -r '.acc_sample' $(CONFIG))
+
+RESULTS := $(shell yq -r '.results_python' $(CONFIG))
+
+
+# Phony Targets 
+
+.phony: all clean very-clean dist-clean
+
+all: $(TARGETS)
+
+clean:
+	rm -f $(TARGETS)
+	rm -f $(RESULTS)
+	rm -f $(GENERATED_DATA)
+
+very-clean: clean
+	rm -f $(WRDS_DATA)
+
+dist-clean: very-clean
+	rm $(SECRETS)
+
+
+# Recipes for intermediate targets
+
+$(WRDS_DATA): code/python/pull_wrds_data.py $(SECRETS) \
+	$(PULL_WRDS_DATA_CFG) $(CONFIG)
+	$(PYTHON) $<
+
+$(GENERATED_DATA): code/python/prepare_data.py $(WRDS_DATA) $(CONFIG) \
+	$(EXTERNAL_DATA) $(PREPARE_DATA_CFG)
+	$(PYTHON) $<
+
+$(RESULTS): code/python/do_analysis.py $(GENERATED_DATA) $(CONFIG) \
+	$(DO_ANALYSIS_CFG)
+	$(PYTHON) $<
+
+
+# Recipes for final targets
+
+$(PAPER): doc/paper_python.qmd doc/references.bib $(RESULTS)
+	quarto render doc/paper_python.qmd --quiet --execute
+	mv output/paper_python.pdf $(PAPER)
+	rm -f doc/paper_python.ttt doc/paper_python.fff
+
+$(PRESENTATION): doc/presentation_python.qmd $(RESULTS) \
+	doc/beamer_theme_trr266.sty
+	quarto render doc/presentation_python.qmd --quiet --execute
+	mv output/presentation_python.pdf $(PRESENTATION)
+	rm -rf output/presentation_python_files

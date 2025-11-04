@@ -1,17 +1,16 @@
-# --- Header -------------------------------------------------------------------
-# Prepares the "Explore Discretionary Accruals" display 
-#
-# (C) TRR 266 -  See LICENSE file for details 
 # ------------------------------------------------------------------------------
-library(readr)
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(purrr)
-library(modelr)
-library(broom)
-library(lubridate)
-library(ExPanDaR)
+# Calculates modified Jones and Dechow/Dichev discretionary accruals and
+# prepares final sample for analysis.
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+# --- Read config and utility functions ----------------------------------------
+
+source("code/R/utils.R")
+
+
+# --- Some helper functions ----------------------------------------------------
 
 accrual_model_mjones <- function(df) {
   lm(tacc ~ inverse_a + drev + ppe, data = df)
@@ -40,14 +39,12 @@ winsorize <- function(df, drop = NULL, ...) {
 
 # --- Prepare base sample ------------------------------------------------------
 
-ff12 <- read_csv(
-  "data/external/fama_french_12_industries.csv", col_types = cols()
-)
-ff48 <- read_csv(
-  "data/external/fama_french_48_industries.csv", col_types = cols()
-)
+log_info("Preparing base sample ...")
 
-us_base_sample <- readRDS("data/pulled/cstat_us_sample.rds") %>%
+ff12 <- read_csv(global_cfg$fama_french_12, col_types = cols())
+ff48 <- read_csv(global_cfg$fama_french_48, col_types = cols())
+
+us_base_sample <- read_parquet(global_cfg$cstat_us_parquet_file) %>%
   filter(
     indfmt == "INDL",
     fic == "USA",
@@ -187,9 +184,13 @@ estimate_dd_accruals <- function(df, min_obs = 10) {
 
 # --- Merge data and prepare samples -------------------------------------------
 
+log_info("Calculating modified Jones discretionary accruals ...")
 mj <- estimate_mj_accruals(us_base_sample) 
+
+log_info("Calculating Dechow and Dichev discretionary accruals ...")
 dd <- estimate_dd_accruals(us_base_sample) 
 
+log_info("Merging data and preparing final sample ...")
 smp<- expand_grid(
   gvkey = unique(us_base_sample$gvkey),
   fyear = unique(us_base_sample$fyear)
@@ -233,4 +234,5 @@ smp<- expand_grid(
     ebit_avgta, cfo_avgta, tacc_avgta
   ) %>% filter(!is.na(mj_da))
 
-saveRDS(smp, "data/generated/acc_sample.rds")
+write_parquet(smp, global_cfg$acc_sample)
+log_info("Final sample saved to '{global_cfg$acc_sample}'.")

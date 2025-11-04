@@ -1,88 +1,117 @@
-# --- Header -------------------------------------------------------------------
-# See LICENSE file for details 
+# ------------------------------------------------------------------------------
+# Downloads WRDS data to local parquet files using a duckdb workflow
 #
-# This code pulls data from WRDS 
+# See LICENSE file for licensing information.
 # ------------------------------------------------------------------------------
 
-library(RPostgres)
-library(DBI)
+# Good starting points to learn more about this workflow are
+# - The support pages of WRDS (they also contain the data documentation)
+# - The wonderful textbook by Ian Gow (https://iangow.github.io/far_book/),
+#   in particular App. D and E
 
-if (!exists("cfg")) source("code/R/read_config.R")
+source("code/R/utils.R")
+cfg <- read_config("config/pull_wrds_data_cfg.yaml")
 
-save_wrds_data <- function(df, fname) {
-  if(file.exists(fname)) {
-    file.rename(
-      fname,
-      paste0(
-        substr(fname, 1, nchar(fname) - 4), 
-        "_",
-        format(file.info(fname)$mtime, "%Y-%m-%d_%H_%M_%S"),".rds")
-    )
-  }
-  saveRDS(df, fname)
+# Downloading data from WRDS is resource intensive. So, by default,
+# this code only downloads data if it is not available locally.
+# You can set the `force_redownload` config variable to bypass this behavior
+
+# Also the config file specifies which tables to download, the variables
+# to keep and filters to apply. You can modify these as needed.
+
+# The secrets file should contain your WRDS login data
+secrets <- read_secrets()
+
+
+# --- Some helper functions to connect to duckdb and WRDS ----------------------
+
+connect_duckdb <- function(dbase_path = ":memory:") {
+  dbConnect(
+    duckdb::duckdb(), dbase_path
+  )
 }
 
-# --- Connect to WRDS ----------------------------------------------------------
+shutdown_duckdb <- function(con) {
+  dbDisconnect(con, shutdown = TRUE)
+}
 
-wrds <- dbConnect(
-  Postgres(),
-  host = 'wrds-pgdata.wharton.upenn.edu',
-  port = 9737,
-  user = cfg$wrds_user,
-  password = cfg$wrds_pwd,
-  sslmode = 'require',
-  dbname = 'wrds'
+link_wrds_to_duckdb <- function(con) {
+  rv <- dbExecute(
+    con, sprintf(paste(
+      "INSTALL postgres;",
+      "LOAD postgres;",
+      "SET pg_connection_limit=4;",
+      "ATTACH '",
+      "dbname=wrds host=wrds-pgdata.wharton.upenn.edu port=9737",
+      "user=%s password=%s' AS wrds (TYPE postgres, READ_ONLY)"
+    ), secrets$wrds_user, secrets$wrds_pwd)
+  )
+}
+
+list_wrds_libs_and_tables <- function(con) {
+  dbGetQuery(
+    con, "SHOW ALL TABLES"
+  )
+}
+
+query_wrds_to_parquet <- function(con, query, parquet_file, force = FALSE) {
+  time_in <- Sys.time()
+  if (file.exists(parquet_file) & ! force) {
+    log_info(
+      "Parquet file '{parquet_file}' exists. ",
+      "Skipping it but updating its mtime. ",
+      "Delete it if you want to re-download"
+    )
+    Sys.setFileTime(parquet_file, Sys.time())
+    return(invisible())
+  }
+  rv <- dbExecute(
+    con, glue_sql(
+      "COPY ({query}) TO {parquet_file} (FORMAT 'parquet')",
+      .con = con
+    )
+  )
+  time_spent <- round(Sys.time() - time_in)
+  log_info(
+    "Query result saved to '{parquet_file}': ",
+    "rows: {format(rv, big.mark = ',')}, ",
+    "time spent: {as_hms(time_spent)}"
+  )
+}
+
+
+# --- Downloading U.S. Compustat data ------------------------------------------
+
+con <- connect_duckdb()
+link_wrds_to_duckdb(con)
+log_info("Linked WRDS to local Duck DB instance.")
+
+
+dyn_vars <- cfg$dyn_vars
+stat_vars <- cfg$stat_vars
+cs_filter <- cfg$cs_filter
+
+log_info("Pulling Compustat data")
+query <- glue_sql(
+  "select s.*, d.* from ",
+  "(select {`stat_vars`*} from wrds.comp.company) s ",
+  "join (select {`dyn_vars`*} from wrds.comp.funda ",
+  paste0("where ", cs_filter, ") d "),
+  "on (s.gvkey = d.gvkey)", .con = con, .literal = TRUE
 )
 
-message("Logged on to WRDS ...")
-
-# --- Specify filters and variables --------------------------------------------
-
-dyn_vars <- c(
-  "gvkey", "conm", "cik", "fyear", "datadate", "indfmt", "sich",
-  "consol", "popsrc", "datafmt", "curcd", "curuscn", "fyr", 
-  "act", "ap", "aqc", "aqs", "acqsc", "at", "ceq", "che", "cogs", 
-  "csho", "dlc", "dp", "dpc", "dt", "dvpd", "exchg", "gdwl", "ib", 
-  "ibc", "intan", "invt", "lct", "lt", "ni", "capx", "oancf", 
-  "ivncf", "fincf", "oiadp", "pi", "ppent", "ppegt", "rectr", 
-  "sale", "seq", "txt", "xint", "xsga", "costat", "mkvalt", "prcc_f",
-  "recch", "invch", "apalch", "txach", "aoloch",
-  "gdwlip", "spi", "wdp", "rcp"
+query <- glue_sql(
+  "select * from ",
+  "(select {`stat_vars`*} from wrds.comp.company) ",
+  "join (select {`dyn_vars`*} from wrds.comp.funda ",
+  paste0("where ", cs_filter, ") "),
+  "using (gvkey)", .con = con
 )
 
-dyn_var_str <- paste(dyn_vars, collapse = ", ")
+query_wrds_to_parquet(
+  con, query, global_cfg$cstat_us_parquet_file,
+  force = cfg$force_redownload
+)
 
-stat_vars <- c("gvkey", "loc", "sic", "spcindcd", "ipodate", "fic")
-stat_var_str <- paste(stat_vars, collapse = ", ")
-
-cs_filter <- "consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='STD' and popsrc='D'"
-
-
-# --- Pull Compustat data ------------------------------------------------------
-
-message("Pulling dynamic Compustat data ... ", appendLF = FALSE)
-res <- dbSendQuery(wrds, paste(
-  "select", 
-  dyn_var_str, 
-  "from COMP.FUNDA",
-  "where", cs_filter
-))
-
-wrds_us_dynamic <- dbFetch(res, n=-1)
-dbClearResult(res)
-message("done!")
-
-message("Pulling static Compustat data ... ", appendLF = FALSE)
-res2<-dbSendQuery(wrds, paste(
-  "select ", stat_var_str, "from COMP.COMPANY"
-))
-
-wrds_us_static <- dbFetch(res2,n=-1)
-dbClearResult(res2)
-message("done!")
-
-wrds_us <- merge(wrds_us_static, wrds_us_dynamic, by="gvkey")
-save_wrds_data(wrds_us, "data/pulled/cstat_us_sample.rds")
-
-dbDisconnect(wrds)
-message("Disconnected from WRDS")
+shutdown_duckdb(con)
+log_info("Disconnected from WRDS")

@@ -1,0 +1,24 @@
+FROM python:3.10
+
+WORKDIR /proj
+
+COPY ./requirements.txt /proj
+
+RUN apt-get update && apt-get -y upgrade \
+    && pip install -r requirements.txt
+
+RUN export QUARTO_VERSION="1.1.179" \
+    && mkdir -p /opt/quarto/${QUARTO_VERSION} \
+    && curl -o quarto.tar.gz -L \
+    "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz" \
+    && tar -zxvf quarto.tar.gz \
+    -C "/opt/quarto/${QUARTO_VERSION}" \
+    --strip-components=1 \
+    && rm quarto.tar.gz \
+    && ln -s /opt/quarto/${QUARTO_VERSION}/bin/quarto /usr/local/bin/quarto \
+    && quarto install tool tinytex \
+    && apt-get install -y ghostscript
+
+COPY . /proj/
+
+CMD [ "make", "L=python" ]

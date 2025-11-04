@@ -1,0 +1,29 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/rocker-org/devcontainer-templates/tree/main/src/r-ver
+{
+	"name": "eval_tutorlain_rver_4.5",
+	"build": { 
+		"dockerfile": "Dockerfile"
+	},
+	"hostRequirements": {
+		"cpus": 4,
+		"memory": "16gb",
+		"storage": "32gb"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"REditorSupport.r",
+				"RDebugger.r-debugger",
+				"quarto.quarto",
+				"ms-python.vscode-pylance",
+				"ms-python.python",
+				"ms-python.debugpy",
+				"mathematic.vscode-pdf",
+				"george-alisson.html-preview-vscode",
+				"mechatroner.rainbow-csv",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	}
+}
