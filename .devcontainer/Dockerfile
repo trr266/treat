@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive TZ=UTC LANG=C.UTF-8
 # System dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      cmake git pandoc wget xz-utils rsync curl \
+      cmake git pandoc wget xz-utils rsync python3-venv curl \
       libxml2-dev libcurl4-openssl-dev libssl-dev libgit2-dev \
       libfontconfig1-dev libharfbuzz-dev libfribidi-dev librsvg2-dev \
       libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
