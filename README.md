@@ -119,8 +119,26 @@ You also see an `output` directory but it is empty. Why? Because you will create
 
 Assuming that you have WRDS access to Compustat North America, this should be relatively straightforward.
 
+### Setting up the Python environment
+
+You have two options for setting up the Python environment:
+
+**Option A: Using pip (traditional approach)**
+
 1.  Create a virtual environment for the project. You can do this by running `python3 -m venv .venv` in the terminal. This will create a virtual environment in the `.venv` directory. You can activate the virtual environment by running `source .venv/bin/activate` on MacOS or Linux or `.\.venv\Scripts\activate` on Windows. You can deactivate the virtual environment by running `deactivate`.
 2.  With an active virtual environment, you can install the required packages by running `pip install -r requirements.txt` in the terminal. This will install the required Python packages for the project.
+
+**Option B: Using uv (faster alternative)**
+
+Instead of steps 1 and 2 above, you can simply run `uv sync` in the terminal. This single command will:
+- Install the Python version specified in `.python-version` (3.12.3)
+- Create a virtual environment automatically
+- Install all dependencies from `pyproject.toml`
+
+After running `uv sync`, you only need to activate the environment with `source .venv/bin/activate`.
+
+### Running the workflow
+
 3.  Copy the file `_secrets.env` to `secrets.env` in the project main directory. Edit it by adding your WRDS credentials.
 4.  Run `make all` via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R.
 5.  Eventually, you will be greeted with two files in the output directory: `treat_paper.pdf` and `treat_presentation.pdf`. Congratulations! You have successfully used an open science resource and reproduced our “analysis”. Now modify it and make it your own project!
