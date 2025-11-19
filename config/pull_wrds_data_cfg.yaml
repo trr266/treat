@@ -1,0 +1,78 @@
+force_redownload: true
+
+dyn_vars:
+    - gvkey
+    - conm
+    - cik
+    - fyear
+    - datadate
+    - indfmt
+    - sich
+    - consol
+    - popsrc
+    - datafmt
+    - curcd
+    - curuscn
+    - fyr
+    - act
+    - ap
+    - aqc
+    - aqs
+    - acqsc
+    - at
+    - ceq
+    - che
+    - cogs
+    - csho
+    - dlc
+    - dp
+    - dpc
+    - dt
+    - dvpd
+    - exchg
+    - gdwl
+    - ib
+    - ibc
+    - intan
+    - invt
+    - lct
+    - lt
+    - ni
+    - capx
+    - oancf
+    - ivncf
+    - fincf
+    - oiadp
+    - pi
+    - ppent
+    - ppegt
+    - rectr
+    - sale
+    - seq
+    - txt
+    - xint
+    - xsga
+    - costat
+    - mkvalt
+    - prcc_f
+    - recch
+    - invch
+    - apalch
+    - txach
+    - aoloch
+    - gdwlip
+    - spi
+    - wdp
+    - rcp
+
+stat_vars:
+    - gvkey
+    - loc
+    - sic
+    - spcindcd
+    - ipodate
+    - fic
+
+cs_filter: consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='STD' and popsrc='D'
+
+

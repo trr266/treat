@@ -1,0 +1,37 @@
+# set the name of the project. This should be a short mnemonic and ideally
+# also the name of your repository
+project_name: treat
+
+# Output file names
+output_paper: output/treat_paper.pdf
+output_presentation: output/treat_presentation.pdf
+
+# Path to a file containing environment variables for sensitive information
+# WRDS login info in our case
+secrets_file: secrets.env
+
+# Possible values: debug, info, warn, error, fatal, off
+# The repo code only uses info and error levels so info is a good default
+log_level: info
+
+# Path to the log file - set to 'stdout' to log to console
+log_file: stdout
+
+# External data paths
+fama_french_12: data/external/fama_french_12_industries.csv
+fama_french_48: data/external/fama_french_48_industries.csv
+
+# File names for output objects that are used in multiple code steps
+cstat_us_parquet_file: data/pulled/cstat_us.parquet
+acc_sample: data/generated/acc_sample.parquet
+
+# Language dependent result objects
+results_python: output/results.pickle
+results_r: output/results.rda
+
+# Language dependent quarto documents
+paper_python: paper/paper_python.qmd
+paper_r: paper/paper_r.qmd
+presentation_python: paper/presentation_python.qmd
+presentation_r: paper/presentation_r.qmd
+

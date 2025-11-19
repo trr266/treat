@@ -2,8 +2,6 @@
 
 # Config
 
-PYTHON := python
-
 RSCRIPT := Rscript --encoding=UTF-8
 
 CONFIG := config/global_cfg.yaml
@@ -60,13 +58,13 @@ $(SECRETS):
 	@echo "To start, you need to copy _$(SECRETS) to $(SECRETS) and edit it"
 	@false
 
-$(WRDS_DATA): code/python/pull_wrds_data.py $(SECRETS) \
-	$(PULL_DATA_CFG) $(CONFIG)
-	$(PYTHON) $<
+$(WRDS_DATA): code/R/pull_wrds_data.R code/R/utils.R $(SECRETS) \
+	$(PULL_WRDS_DATA_CFG)  $(CONFIG)
+	$(RSCRIPT) code/R/pull_wrds_data.R
 
-$(GENERATED_DATA): code/python/prepare_data.py $(WRDS_DATA) $(CONFIG) \
-	$(EXTERNAL_DATA) $(PREPARE_DATA_CFG)
-	$(PYTHON) $<
+$(GENERATED_DATA): $(WRDS_DATA) $(EXTERNAL_DATA) \
+	code/R/prepare_data.R code/R/utils.R $(CONFIG)
+	$(RSCRIPT) code/R/prepare_data.R
 
 $(RESULTS):	$(GENERATED_DATA) code/R/do_analysis.R code/R/utils.R $(CONFIG)
 	$(RSCRIPT) code/R/do_analysis.R

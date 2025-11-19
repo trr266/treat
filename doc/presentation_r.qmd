@@ -1,0 +1,141 @@
+---
+title: "Exploring Discretionary Accruals"
+author: "Joachim Gassen"
+institute: "TRR 266 Accounting for Transparency"
+date: last-modified
+date-format: long
+fontsize: "9pt"
+pdf-engine: xelatex # pdflatex creates rastered fonts
+format: 
+  beamer:
+    slide-level: 3
+    number-sections: false
+    toc: false
+classoption: "aspectratio=169"
+execute:
+  echo: false
+  message: false
+  warning: false
+header-includes:
+- \usepackage{booktabs} 
+- \usepackage{threeparttable}
+- \usepackage{graphicx}
+- \input{beamer_theme_trr266_16x9.sty}
+---
+
+
+```{r setup}
+library(tidyverse)
+library(glue)
+library(gt)
+
+load("../output/results.rda")
+
+convert_to_latex <- function(gt_table) {
+	gt_table %>% 
+		as_latex() %>% 
+		strsplit(split = "\n", fixed= TRUE) %>%
+		unlist() %>%
+		str_replace(fixed("{tabular*}"), "{tabular}") %>%
+		str_replace(fixed("{\\linewidth}{@{\\extracolsep{\\fill}}"), "{")
+}
+```
+
+
+# Motivation
+
+### Discretionary Accruals
+
+- Are used in tons of papers
+- As measurement constructs for almost everything
+  - Earnings Management
+  - Earnings Quality
+  - Audit Quality
+  - Management Quality
+- But how do they look like?
+
+
+### Data
+
+```{r tab_descriptives_sample, results="asis"}
+latex_tab <- c(
+	"\\centering{",
+  head(convert_to_latex(tab_desc_stat)[-(1:2)], -1),
+	"}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### Distribution of Discretionary Accruals over time - unrestricted sample
+
+```{r BPlotFULL, fig.height=5}
+fig_boxplot_full
+```
+
+
+### Distribution of Discretionary Accruals over time - analysis sample
+
+```{r BPlotSMP, fig.height=5}
+fig_boxplot_smp
+```
+
+
+### Correlation of Modified Jones with Dechow and Dichev DA
+
+```{r CorrVizz, fig.height=5}
+fig_scatter_md_dd
+```
+
+
+### Association of Dechow and Dichev DA with firm size
+
+```{r AssDDSize, fig.height=5}
+fig_scatter_dd_lnta
+```
+
+
+### No presentation without correlation table...
+
+``` {r CorrTable, results="asis"}
+latex_tab <- c(
+	"\\centering{",
+  head(convert_to_latex(tab_corr)[-(1:2)], -1),
+	"}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### ... and regression table
+
+``` {r RegTable, results="asis"}
+tab_reg <- head(convert_to_latex(tab_regression)[-(1:2)], -1)
+
+#  Add a midline above the Observations row
+obs_row <- which(str_detect(tab_reg, fixed("Observations")))
+tab_reg <- c(
+	tab_reg[1:(obs_row-1)], "\\midrule", tab_reg[obs_row:length(tab_reg)]
+)
+
+latex_tab <- c(
+	"\\centering{",
+  tab_reg,
+	"}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### Conclusion
+
+- Discretionary accruals are simply wonderful! 
+- With these distributional properties and the power of large samples they will almost always be significant in one direction or the other regardless the setting or controls
+- Use them for every economic construct under the sun!
+
+
+
+
+
+
+

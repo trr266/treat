@@ -1,0 +1,19 @@
+[project]
+name = "treat"
+version = "0.0.0"
+description = "TRR 266 template for reproducible empirical accounting research"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.2.2",
+    "jupyter==1.0.0",
+    "plotnine==0.13.6",
+    "pyfixest>=0.30.2",
+    "Jinja2==3.1.4",
+    "PyYAML==6.0.1",
+    "python-dotenv==1.0.1",
+    "duckdb>=1.4.1",
+    "pyarrow==21.0.0",
+]

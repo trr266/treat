@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
-# Some utility functions and our TRR 266 ggplot2 Theme
+# Our TRR 266 ggplot2 Theme
 #
-# (c) TRR 266 - Read LICENSE for details
+# See LICENSE file for licensing information.
 # ------------------------------------------------------------------------------
 
 theme_trr <- function(
@@ -32,7 +32,7 @@ theme_trr <- function(
         axis.line = if (plot_type %in% c("line", "scatter", "default")) {
           element_blank()
         } else {
-          element_line(size = 0.3, lineend = "round")
+          element_line(linewidth = 0.3, lineend = "round")
         },
         legend.position = if (legend) "top" else "none",
         legend.background = element_blank(),
@@ -41,7 +41,7 @@ theme_trr <- function(
         legend.direction = "horizontal",
         legend.box.background = element_blank(),
         panel.background = element_blank(),
-        panel.grid = element_line(colour = "#EBEBEBFF", size = 0.4),
+        panel.grid = element_line(colour = "#EBEBEBFF", linewidth = 0.4),
         panel.grid.minor.x = if (!plot_type %in% c("lollipop", "scatter")) {
           element_blank()
         } else {

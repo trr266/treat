@@ -1,0 +1,180 @@
+---
+title: "Exploring Discretionary Accruals"
+author: "Joachim Gassen"
+institute: "TRR 266 Accounting for Transparency"
+date: last-modified
+date-format: long
+fontsize: "9pt"
+pdf-engine: xelatex # pdflatex creates rastered fonts
+format: 
+  beamer:
+    slide-level: 3
+    number-sections: false
+    toc: false
+classoption: "aspectratio=169"
+execute:
+  echo: false
+  message: false
+  warning: false
+header-includes:
+- \usepackage{booktabs} 
+- \usepackage{threeparttable}
+- \usepackage{graphicx}
+- \input{beamer_theme_trr266_16x9.sty}
+---
+
+
+```{python}
+#| output: false
+
+import pickle
+import yaml
+# Not sure why one needs this, but without it, the plots do not show in the PDF
+import matplotlib.pyplot as plt
+plt.show()
+
+global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
+
+with open('../' + global_cfg['results_python'], 'rb') as f:
+        results = pickle.load(f)
+
+min_fyear, max_fyear, no_unique_firms = results['Desc information'].values()
+
+
+def rename_var_to_label(table, italic=True):
+    for var_name, var_label in results['Variable Names'].items():
+        var_label = f'\\textit{{{var_label}}}' if italic else var_label
+        table = table.replace(var_name, var_label)
+    return table
+```
+
+
+# Motivation
+
+### Discretionary Accruals
+
+- Are used in tons of papers
+- As measurement constructs for almost everything
+  - Earnings Management
+  - Earnings Quality
+  - Audit Quality
+  - Management Quality
+- But how do they look like?
+
+
+### Data
+
+```{python}
+#| output: asis
+
+lat_tab = rename_var_to_label(results['Descriptive Statistics']).split('\n')
+# lat_tab[4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+# lat_tab[6] = '\\hline\\\\[-1.8ex]'
+# lat_tab[-4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+
+print('\n'.join([
+    '\\begin{table}[!htbp]',  
+    '\\resizebox{\\textheight}{!}{',
+    '\\begin{threeparttable}',
+    '\n'.join(lat_tab[3:-2]),
+    '\\begin{tablenotes}[flushleft]',
+    '\setlength{\labelsep}{0pt}',
+    f'\\item Note: The data is obtained from the Compustat U.S. as provided by WRDS. The sample covers the period {int(min_fyear)} to {int(max_fyear)} and {no_unique_firms:,} unique firms.',
+    '\end{tablenotes}',
+    '\end{threeparttable}',
+    '}',
+    '\\end{table}',
+]))
+```
+
+### Distribution of Discretionary Accruals over time - unrestricted sample
+
+```{python}
+#| label: fig-boxplot_full
+#| fig-cap: "Distribution of Discretionary Accruals over time - unrestricted sample"
+
+results['fig_boxplot_full'].set_figheight(2.6)
+results['fig_boxplot_full']
+```
+
+### Distribution of Discretionary Accruals over time - analysis sample
+
+
+```{python}
+#| label: fig-boxplot_smp
+#| fig-cap: "Distribution of Discretionary Accruals over Time - analysis sample"
+
+results['fig_boxplot_smp'].set_figheight(2.6)
+results['fig_boxplot_smp']
+```
+
+
+### Correlation of Modified Jones with Dechow and Dichev DA
+
+```{python}
+#| label: fig-scatter_md_dd
+#| fig-cap: "Correlation of Modified Jones with Dechow and Dichev DA"
+
+results['fig_scatter_md_dd'].set_figheight(3)
+results['fig_scatter_md_dd']
+```
+
+
+### Association of Dechow and Dichev DA with firm size
+
+```{python}
+#| label: fig-scatter_dd_lnta
+#| fig-cap: "Dechow and Dichev DA and Firm Size"
+
+results['fig_scatter_dd_lnta'].set_figheight(3)
+results['fig_scatter_dd_lnta']
+```
+
+### No presentation without correlation table...
+
+
+```{python}
+#| output: asis
+
+lat_tab = rename_var_to_label(results['Correlations'], False).split('\n')
+lat_tab[2] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+lat_tab[4] = '\\hline\\\\[-1.8ex]'
+lat_tab[-7] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+
+print('\n'.join([
+    '\\begin{center}',
+    '\\resizebox*{\\textwidth}{!}{',
+    '\\begin{tabular}{lccccccc}',
+    '\n'.join(lat_tab[2:-6]),
+    '\\end{tabular}}',
+    '\\end{center}'
+]))
+```
+
+### ... and regression table
+
+```{python}
+#| output: asis
+
+print('\n'.join([
+    '\\begin{center}',
+    '\\resizebox*{!}{0.8\\textheight}{', 
+    '\\begin{tabular}{lcc}',
+    rename_var_to_label('\n'.join(results['Regression'].split('\n')[4:-2])),
+    '\\end{tabular}}',
+    '\\end{center}'
+]))
+```
+
+### Conclusion
+
+- Discretionary accruals are simply wonderful! 
+- With these distributional properties and the power of large samples they will almost always be significant in one direction or the other regardless the setting or controls
+- Use them for every economic construct under the sun!
+
+
+
+
+
+
+
