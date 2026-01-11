@@ -1,0 +1,4351 @@
+You are a teacher and point of contact for this repository: a reproducible research template for empirical accounting projects (TRR 266) with a toy analysis.
+
+Your job is to help me learn, understand, and adapt this repository.
+
+Assume:
+- I may not have a computer science background
+- I need plain-language explanations
+- Jargon should be defined
+- I want concrete, actionable next steps
+
+────────────────
+Rules you must follow:
+1. Use ONLY the files provided inside <REPO_TEXT>.
+2. If something is not in the snapshot, explicitly say so and ask for it.
+3. Do NOT guess or speculate about missing files or behavior.
+4. Prefer explanation over code; when showing commands, explain what they do.
+5. Treat me as a researcher, not a software engineer.
+
+────────────────
+When answering, emphasize common pain points specific to this repo:
+- Makefile-driven workflows (targets, dependencies, partial runs)
+- Pulling data via code (WRDS, credentials, why data is not committed)
+- DuckDB’s role in the data pipeline
+- Quarto documents in `doc/` and how outputs are generated
+- Devcontainers (VS Code / Codespaces usage)
+- Python environment setup (`uv` vs `pip`, `.python-version`)
+- `_secrets.env` vs `secrets.env` and safe credential handling
+- Why `data/` and `output/` are gitignored
+
+────────────────
+Answering guidelines:
+- Start with a high-level mental model, then go into details
+- Use step-by-step explanations with explicit commands and file paths
+- Call out common beginner mistakes
+- Explain both R and Python paths when relevant
+
+────────────────
+Clarifying questions:
+Only ask clarifying questions if execution context matters (e.g., OS, devcontainer vs local, R vs Python path, WRDS access).
+
+Default assumptions unless stated otherwise:
+- Linux-like shell
+- Running from repo root
+- Makefile-driven workflow
+- VS Code environment
+
+────────────────
+The repository snapshot is provided between <REPO_TEXT> and </REPO_TEXT>.
+Each file starts and ends with `:::` and its filename. Below is an example of how this looks.
+
+```
+<REPO_TEXT>
+
+:::
+
+FILENAME_1
+
+<content of the file>
+
+:::
+
+FILENAME_2
+
+<content of the file>
+
+:::
+
+</REPO_TEXT>
+```
+
+Once you see </REPO_TEXT>, treat the snapshot as complete.
+
+
+────────────────
+If you have fully understood your task, respond with:
+
+--- I have understood my task.
+I will:
+- Use only the provided repository snapshot
+- Explain concepts in plain language
+- Focus on Make, data pulls, DuckDB, Quarto, and environments
+- Ask clarifying questions only when execution context matters
+
+<REPO_TEXT>
+
+File Structure
+
+├── .devcontainer
+│   ├── Dockerfile
+│   └── devcontainer.json
+├── .gitignore
+├── .python-version
+├── LICENSE
+├── Makefile
+├── Makefile_R
+├── Makefile_python
+├── README.md
+├── README.qmd
+├── _secrets.env
+├── code
+│   ├── R
+│   │   ├── do_analysis.R
+│   │   ├── prepare_data.R
+│   │   ├── pull_wrds_data.R
+│   │   ├── theme_trr.R
+│   │   └── utils.R
+│   └── python
+│       ├── do_analysis.py
+│       ├── panel_eda_helper_funcs.py
+│       ├── prepare_data.py
+│       ├── pull_wrds_data.py
+│       ├── theme_trr.py
+│       └── utils.py
+├── config
+│   ├── global_cfg.yaml
+│   └── pull_wrds_data_cfg.yaml
+├── doc
+│   ├── .gitignore
+│   ├── _quarto.yml
+│   ├── beamer_theme_trr266.sty
+│   ├── beamer_theme_trr266_16x9.sty
+│   ├── output
+│   ├── paper_python.qmd
+│   ├── paper_r.qmd
+│   ├── presentation_python.qmd
+│   ├── presentation_r.qmd
+│   └── references.bib
+├── pyproject.toml
+└── python_dockerfile
+
+
+:::
+
+DEVCONTAINER.JSON
+
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/rocker-org/devcontainer-templates/tree/main/src/r-ver
+{
+	"name": "eval_tutorlain_rver_4.5",
+	"build": { 
+		"dockerfile": "Dockerfile"
+	},
+	"hostRequirements": {
+		"cpus": 4,
+		"memory": "16gb",
+		"storage": "32gb"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"REditorSupport.r",
+				"RDebugger.r-debugger",
+				"quarto.quarto",
+				"ms-python.vscode-pylance",
+				"ms-python.python",
+				"ms-python.debugpy",
+				"mathematic.vscode-pdf",
+				"george-alisson.html-preview-vscode",
+				"mechatroner.rainbow-csv",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	}
+}
+:::
+
+:::
+
+DOCKERFILE
+
+FROM rocker/r-ver:4.5
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=UTC LANG=C.UTF-8
+
+# System dependencies
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      cmake git pandoc wget xz-utils rsync python3-venv curl \
+      libxml2-dev libcurl4-openssl-dev libssl-dev libgit2-dev \
+      libfontconfig1-dev libharfbuzz-dev libfribidi-dev librsvg2-dev \
+      libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+      libpq-dev ghostscript \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+# R packages
+RUN install2.r --error --skipinstalled \
+      tidyverse rmarkdown modelsummary gt languageserver \
+      fixest glue logger dotenv ggbeeswarm devtools \
+      colorspace hms duckdb yaml arrow \
+  && Rscript -e "install.packages('vscDebugger', repos='https://manuelhentschel.r-universe.dev')" \
+  && rm -rf /tmp/downloaded_packages
+
+# TinyTeX + required LaTeX packages
+RUN set -eux; \
+  install2.r --error --skipinstalled tinytex; \
+  Rscript -e "tinytex::install_tinytex()"; \
+  ln -sf /root/bin/* /usr/local/bin/ 
+
+RUN tlmgr install \
+    latexmk xetex fontspec ifxetex beamer pgf xcolor graphics graphicx \
+    geometry setspace caption footmisc array threeparttable adjustbox \
+    csquotes etoolbox kvoptions booktabs endfloat environ ulem \
+    cmbright carlito lmodern makecell hyperref xurl babel-english \
+    bibtex natbib apsr epstopdf multirow wrapfig colortbl pdflscape tabu \
+    threeparttablex extsizes; \
+  tlmgr repository
+
+# Quarto 
+RUN set -eux; \
+  QUARTO_VERSION=1.6.40; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) QA=linux-amd64 ;; \
+    arm64) QA=linux-arm64 ;; \
+    *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  wget -O /tmp/quarto.deb \
+    "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-${QA}.deb"; \
+  dpkg -i /tmp/quarto.deb; rm /tmp/quarto.deb
+
+# yq (auto-detect arch; avoid ARG)
+RUN set -eux; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) YQ=yq_linux_amd64 ;; \
+    arm64) YQ=yq_linux_arm64 ;; \
+    *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  YQ_VERSION=v4.47.2; \
+  wget -O /usr/local/bin/yq \
+    "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ}"; \
+  chmod +x /usr/local/bin/yq
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+CMD ["/bin/sh"]
+:::
+
+:::
+
+.GITIGNORE
+
+# Local and project stuff
+.DS_Store
+*.log
+public/
+playground.R
+playground.py
+secrets.env
+
+# Python stuff
+__pycache__/
+.venv
+venv
+treat.egg-info/
+
+
+# R Stuff
+.Rproj.user
+*.Rproj
+.Rhistory
+.quarto
+/.vscode
+:::
+
+:::
+
+.PYTHON-VERSION
+
+3.12.3
+
+:::
+
+:::
+
+DO_ANALYSIS.PY
+
+import pickle
+import pandas as pd
+import numpy as np
+from plotnine import ggplot, geom_boxplot, labs, aes, geom_bin2d, after_stat
+from panel_eda_helper_funcs import (prepare_correlation_table,
+                                    prepare_descriptive_table, PrepareRegressionTable,
+                                    escape_for_latex)
+from prepare_data import treat_outliers
+from theme_trr import theme_trr, scale_color_trr266_d, scale_fill_trr266_c
+
+from utils import setup_logging, read_config
+
+log = setup_logging()
+global_cfg = read_config('config/global_cfg.yaml')
+
+def main():
+    log.info("Reading and preparing data...")
+    smp = pd.read_parquet(global_cfg['acc_sample'])
+    smp_da = prep_smp_da(smp)
+
+    log.info("Preparing figures...")
+    fig_boxplot_full = make_boxplot(smp)
+
+
+    fig_boxplot_smp = make_boxplot(smp_da)
+
+    fig_scatter_md_dd = make_scatter_plot(
+        smp_da, 'mj_da', 'dd_da', 'Modified Jones DA', 'Dechow and Dichev DA'
+    )
+
+    fig_scatter_dd_lnta = make_scatter_plot(
+        smp_da, 'ln_ta', 'dd_da', 'ln(Total Assets)', 'Dechow and Dichev DA'
+    )
+
+    fig_scatter_dd_roa = make_scatter_plot(
+        smp_da, 'ebit_avgta', 'dd_da', 'Return on Assets', 'Dechow and Dichev DA'
+    )
+    fig_scatter_dd_salesgr = make_scatter_plot(
+        smp_da, 'sales_growth', 'dd_da', 'Sales Growth', 'Dechow and Dichev DA'
+    )
+
+
+    log.info("Preparing tables...")
+    tab_desc_stat = prepare_descriptive_table(smp_da.drop(['fyear'], axis=1))
+
+    desc_info = {
+        'min_fyear': smp_da['fyear'].min(),
+        'max_fyear': smp_da['fyear'].max(),
+        'no_unique_firms': smp_da['gvkey'].nunique()
+    }
+
+    tab_corr = prepare_correlation_table(smp_da.drop(['fyear'], axis=1))
+
+    smp_da = smp_da.set_index(['gvkey', 'fyear'])
+
+    tab_regression = PrepareRegressionTable(
+        smp_da,
+        dvs=['mj_da', 'dd_da'],
+        idvs=[
+            ['ln_ta', 'mtb', 'ebit_avgta', 'sales_growth'],
+            ['ln_ta', 'mtb', 'ebit_avgta', 'sales_growth']
+        ],
+        entity_effects=[True, True], time_effects=[True, True],
+        cluster_entity=[True, True], cluster_time=[True, True],
+        models=['ols', 'ols']
+    ).latex_table
+
+    var_names = list(smp_da.drop('ff12_ind', axis=1).columns.values)
+    label = [
+        'Modified Jones DA',
+        'Dechow and Dichev DA',
+        'Ln(Total assets)',
+        'Ln(Market capitalization)',
+        'Market to book',
+        'Return on assets',
+        'Sales growth'
+    ]
+
+    var_names = dict(zip([escape_for_latex(var) for var in var_names], label))
+
+    results = {
+        'fig_boxplot_full': fig_boxplot_full,
+        'fig_boxplot_smp': fig_boxplot_smp,
+        'fig_scatter_md_dd': fig_scatter_md_dd,
+        'fig_scatter_dd_lnta': fig_scatter_dd_lnta,
+        'fig_scatter_dd_roa': fig_scatter_dd_roa,
+        'fig_scatter_dd_salesgr': fig_scatter_dd_salesgr,
+        'Descriptive Statistics': tab_desc_stat,
+        'Desc information': desc_info,
+        'Correlations': tab_corr,
+        'Regression': tab_regression,
+        'Variable Names': var_names
+    }
+    log.info(f"Done. Storing output objects in '{global_cfg['results_r']}'")
+    with open(global_cfg['results_python'], 'wb') as f:
+        pickle.dump(results, f)
+
+
+def make_boxplot(df):
+    df = df \
+        .filter(['fyear', 'mj_da', 'dd_da']) \
+        .query('dd_da.notna()') \
+        .melt('fyear', ['mj_da', "dd_da"], 'type', 'da') \
+        .assign(types=lambda x: x[['fyear', 'type']].astype(str)
+                .agg('.'.join, axis=1))
+
+    return (ggplot(df, aes(x='fyear', y='da', group='types', color='type')) +
+            geom_boxplot() +
+            labs(x="Fiscal year", y=None, color="Type of discretionary accruals") +
+            scale_color_trr266_d(labels=["Dechow and Dichev", "Modified Jones"]) +
+            theme_trr(legend=True)).draw()
+
+
+def prep_smp_da(smp):
+    smp_da = smp[['gvkey', 'fyear', 'ff12_ind', 'mj_da', 'dd_da',
+                  'ln_ta', 'ln_mktcap', 'mtb', 'ebit_avgta', 'sales_growth']]
+
+    smp_da = smp_da[
+        np.isfinite(smp_da.drop(['gvkey', 'fyear'], axis=1).sum(
+            numeric_only=True, axis=1, skipna=False))
+    ]
+    smp_da = treat_outliers(smp_da, by="fyear")
+    return smp_da
+
+
+def make_scatter_plot(df, x, y, xlab, ylab):
+    return (ggplot(df, aes(x=x, y=y)) +
+            geom_bin2d(aes(fill=after_stat('np.log(count)')), bins=[100, 100]) +
+            labs(x=xlab, y=ylab) +
+            scale_fill_trr266_c() +
+            theme_trr(axis_y_horizontal=False)).draw()
+
+
+if __name__ == "__main__":
+    main()
+
+:::
+
+:::
+
+PANEL_EDA_HELPER_FUNCS.PY
+
+# Panel Exploratory Data Analysis (PanelEDA) helper functions
+import re
+import string
+import pandas as pd
+import numpy as np
+from scipy.stats import spearmanr, pearsonr
+from pyfixest.estimation import feols
+
+
+def prepare_descriptive_table(df, precision=3):
+    df = df.select_dtypes(include=np.number)
+    desc = df.describe().transpose()
+    desc.columns = ["N", "Mean", "Std. dev.",
+                    "Min.", r"25 \%", "Median", r"75 \%", "Max."]
+    desc = desc.astype({'N': 'int'})
+
+    desc = desc.style.format(
+        precision=precision, thousands=',').to_latex(convert_css=True)
+
+    desc = re.sub(r"_", r"\\_", desc,  0, re.MULTILINE).split('\n')[0:-1]
+    desc[0] = re.sub(r"}{", r"}[t]{", desc[0])
+
+    desc = [r'\begin{table}', r'\caption{Descriptive Statistics}',
+            r'\centering', desc[0], r'\toprule', desc[1], r'\midrule'] + desc[2:-1] + [r'\bottomrule', desc[-1], r'\end{table}']
+    return '\n'.join(desc)+'\n'
+
+
+def _highlight_sig_corr(pval_tab):
+    return pval_tab.map(lambda y: 'font-weight:bold'.format() if y else '')
+
+
+def prepare_correlation_table(df, pval=0.05):
+    df = df.select_dtypes(include=np.number)
+    _spe, pval_tab = spearmanr(df)
+
+    letters = list(string.ascii_uppercase[0:len(df.columns)])
+    ind = [f'{letter}: {col}' for col, letter in zip(df.columns, letters)]
+
+    _spe = pd.DataFrame(_spe, columns=letters, index=ind)
+    pval_tab = pd.DataFrame(pval_tab, columns=letters, index=ind) < pval
+    pval_tab = pval_tab.astype(object)
+
+    for i in range(len(_spe)):
+        for j in range(len(_spe)):
+            if i == j:
+                _spe.iloc[i, j] = np.nan
+                pval_tab.iloc[i, j] = np.nan
+            if i < j:
+                person, pval_person = pearsonr(df.iloc[:, i], df.iloc[:, j])
+                _spe.iloc[i, j] = person
+                pval_tab.iloc[i, j] = pval_person < pval
+
+    corr = (_spe.style.apply(_highlight_sig_corr, axis=None)  # type: ignore
+            .format(precision=2, na_rep='').to_latex(convert_css=True)
+            )
+
+    corr = re.sub(r"_", r"\\_", corr,  0, re.MULTILINE).split('\n')[0:-1]
+
+    corr = [r'\begin{threeparttable}', corr[0], '\\toprule',
+            corr[1], '\\midrule'] + corr[2:-1] + ['\\bottomrule', corr[-1]]
+
+    corr.extend([
+        r'\begin{tablenotes}',
+        f'\\item This table reports Pearson correlations above and Spearman correlations below the diagonal. Number of observations:, {len(df):,}. Correlations with significance levels below {round(pval * 100)}\\% appear in bold print.',
+        r'\end{tablenotes}',
+        r'\end{threeparttable}'])
+
+    return '\n'.join(corr) + '\n'
+
+
+def escape_for_latex(x: str):
+    chars = ['\\', '&', '%', '#', '_', '{', '}', '~', '^']
+    replacements = ['\\textbackslash ', '\\&', '\\%', '\\#', '\\_',
+                    '\\{', '\\}', '\\textasciitilde ', '\\textasciicircum ']
+    for c, r in zip(chars, replacements):
+        x = x.replace(c, r)
+    return x
+
+
+class PrepareRegressionTable:
+    '''
+    Prepares a regression table for the given dataframe using pyfixest.
+
+    parameters:
+    ----------
+    df : pd.DataFrame
+        A pandas dataframe with the data to be used for estimating the models.
+        Must have a MultiIndex with entity and time dimensions.
+    dvs: list[str]
+        A list of the dependent variables to be used for estimating the models.
+    id_vars: list[list[str]]
+        A list of lists of the independent variables to be used for estimating the models.
+    entity_effects : list[bool] | None
+        If True, the entity fixed effects will be included in the model.
+    time_effects : list[bool] | None
+        If True, the time fixed effects will be included in the model.
+    cluster_entity : list[bool] | None
+        If True, the standard errors will be entity clustered.
+    cluster_time : list[bool] | None
+        If True, the standard errors will be time clustered.
+    models : list[str] | None
+        A list of model specification for each model (can be 'ols', 'logit' or 'auto'). Logit models are not implemented yet.
+    byvar : str
+        A categorical variable to estimate the models on(only possible if only one model is being estimated). This is not implemented yet.
+
+    returns:
+    ----------
+    A list of estimation results for each model. 
+
+    A latex table with the results can be accessed by calling the latex_table attribute.
+    '''
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        dvs: list[str],
+        idvs: list[list[str]],
+        entity_effects: list[bool] | None = None,
+        time_effects: list[bool] | None = None,
+        cluster_entity: list[bool] | None = None,
+        cluster_time: list[bool] | None = None,
+        models: list[str] | None = None,
+        byvar: str = ''
+    ) -> None:
+
+        self.df = df.reset_index()  # pyfixest needs regular DataFrame
+        self.dvs = dvs
+        self.idvs = idvs
+        self.entity, self.time = df.index.names
+        self.len = len(dvs)
+
+        self.entity_effects = [False] * len(dvs) \
+            if entity_effects is None else entity_effects
+
+        self.time_effects = [False] * len(dvs) \
+            if time_effects is None else time_effects
+
+        self.cluster_entity = [False] * len(dvs) \
+            if cluster_entity is None else cluster_entity
+
+        self.cluster_time = [False] * len(dvs) \
+            if cluster_time is None else cluster_time
+
+        self.models = ['auto'] * len(dvs) \
+            if models is None else [m.lower() for m in models]
+
+        self.byvar = byvar
+
+        if len(set(self.models) - {'auto', 'ols', 'logit'}) != 0:
+            raise Exception('models can only be "auto", "ols" or "logit"')
+
+        if 'logit' in self.models:
+            raise NotImplementedError('logit is not implemented yet, sorry')
+
+        _equal_len_vars = ['dvs', 'idvs', 'entity_effects', 'time_effects',
+                           'cluster_entity', 'cluster_time', 'models']
+
+        if len({len(getattr(self, a)) for a in _equal_len_vars}) > 1:
+            raise Exception(
+                f'The following variables must have the same length: {", ".join(_equal_len_vars)}')
+
+        if self.byvar:
+            raise Exception('Byvar is not implemented yet')
+
+        self.params = self._get_stat('params')
+        self.std_errors = self._get_stat('std_errors')
+        self.pvalues = self._get_stat('pvalues')
+        self.estimator = self._get_stat('name')
+        self.nobs = self._get_stat('nobs')
+        self.nobs_orig = self._get_stat('nobs_orig')
+        self.singletons = self._get_stat('singletons')
+        self.rsquared_adj = self._get_stat('rsquared_adj')
+        self.rsquared_adj_within = self._get_stat('rsquared_adj_within')
+        
+        self.latex_table = '\n'.join([
+            '\\begin{table}[!htbp] \\centering',
+            ' \\caption{}',
+            ' \\label{}',
+            f'\\begin{{tabular}}{{@{{\\extracolsep{{5pt}}}}l{"c" * self.len}}}',
+            '\\\\[-1.8ex]\\hline \n\\hline \\\\[-1.8ex]',
+            f' & \\multicolumn{{{str(len(self.results))}}}{{c}}{{\\textit{{Dependent variable:}}}} \\\\',
+            f'\\cline{{{"{}-{}".format(2, len(self.results)+1)}}}',
+            f'\\\\[-1.8ex] & {" & ".join(escape_for_latex(dv) for dv in self.dvs)} \\\\',
+            '\\\\[-1.8ex] &  ' +
+            ' & '.join(f'({i+1})' for i in range(self.len)) + '\\\\',
+            '\\hline \\\\[-1.8ex]',
+            self.params_latex(),
+            '\\hline \\\\[-1.8ex]',
+            f'Observations & {" & ".join(f"{x:,}" for x in self.nobs_orig)} \\\\',
+            f'Singletons dropped & {" & ".join(f"{x:,}" for x in self.singletons)} \\\\',
+            f'Observations used & {" & ".join(f"{x:,}" for x in self.nobs)} \\\\',
+            f'Fixed Effects & {" & ".join(self.fe_str)} \\\\',
+            f'SE Clustered & {" & ".join(self.cl_str)} \\\\',
+            f'Adj. R² (overall) & {" & ".join(f"{x:.3f}" for x in self.rsquared_adj)} \\\\',
+            f'Adj. R² (within) & {" & ".join(f"{x:.3f}" for x in self.rsquared_adj_within)} \\\\',
+            '\\hline',
+            '\\hline \\\\[-1.8ex]',
+            f'\\textit{{Note:}} & \\multicolumn{{{str(len(self.results))}}}{{r}}{{$^{{*}}$p$<$0.1; $^{{**}}$p$<$0.05; $^{{***}}$p$<$0.01}} \\\\',
+            '\\end{tabular}',
+            '\\end{table}'
+        ])
+
+    @property
+    def fe_str(self):
+        fe_list = []
+        for e, t in zip(self.entity_effects, self.time_effects):
+            if e and t:
+                fe_list.append("Firm and Year")
+            elif e:
+                fe_list.append("Firm")
+            elif t:
+                fe_list.append("Year")
+            else:
+                fe_list.append("")
+        return fe_list
+
+    @property
+    def cl_str(self):
+        cl_list = []
+        for e, t in zip(self.cluster_entity, self.cluster_time):
+            if e and t:
+                cl_list.append("Firm and Year")
+            elif e:
+                cl_list.append("Firm")
+            elif t:
+                cl_list.append("Year")
+            else:
+                cl_list.append("")
+        return cl_list
+
+    @property
+    def results(self):
+        '''
+        Estimates the models for the given arguments using pyfixest.
+        '''
+        estimated_models = []
+
+        for i in range(len(self.dvs)):
+            formula_parts = [self.dvs[i], "~"]
+            formula_parts.append(" + ".join(self.idvs[i]))
+            
+            fe_parts = []
+            if self.entity_effects[i]:
+                fe_parts.append(self.entity)
+            if self.time_effects[i]:
+                fe_parts.append(self.time)
+            
+            if fe_parts:
+                formula_parts.append("|")
+                formula_parts.append(" + ".join(fe_parts))
+            
+            formula = " ".join(formula_parts)
+            
+            vcov_parts = []
+            if self.cluster_entity[i]:
+                vcov_parts.append(self.entity)
+            if self.cluster_time[i]:
+                vcov_parts.append(self.time)
+            
+            if vcov_parts:
+                vcov = {"CRV1": " + ".join(vcov_parts)}
+            else:
+                vcov = "iid"
+            
+            res = feols(
+                fml=formula,
+                data=self.df,
+                vcov=vcov,
+                fixef_rm='singleton'
+            )
+            
+            estimated_models.append(res)
+
+        return estimated_models
+
+    def _get_stat(self, stat):
+        if stat == 'params':
+            all_params = []
+            for i, res in enumerate(self.results):
+                coef_df = res.coef().reset_index()
+                coef_df.columns = ['variable', f'Model_{i+1}']
+                all_params.append(coef_df)
+            
+            result = all_params[0]
+            for df in all_params[1:]:
+                result = result.merge(df, on='variable', how='outer')
+            
+            result = result.set_index('variable')
+            return result
+        
+        elif stat == 'std_errors':
+            all_se = []
+            for i, res in enumerate(self.results):
+                se_df = res.se().reset_index()
+                se_df.columns = ['variable', f'Model_{i+1}']
+                all_se.append(se_df)
+            
+            result = all_se[0]
+            for df in all_se[1:]:
+                result = result.merge(df, on='variable', how='outer')
+            
+            result = result.set_index('variable')
+            return result
+        
+        elif stat == 'pvalues':
+            all_pval = []
+            for i, res in enumerate(self.results):
+                pval_df = res.pvalue().reset_index()
+                pval_df.columns = ['variable', f'Model_{i+1}']
+                all_pval.append(pval_df)
+            
+            result = all_pval[0]
+            for df in all_pval[1:]:
+                result = result.merge(df, on='variable', how='outer')
+            
+            result = result.set_index('variable')
+            return result
+        
+        elif stat == 'nobs':
+            return pd.Series([res._N for res in self.results])
+        
+        elif stat == 'nobs_orig':
+            return pd.Series([res._N + len(res._na_index) for res in self.results])
+        
+        elif stat == 'singletons':
+            return pd.Series([len(res._na_index) for res in self.results])
+        
+        elif stat == 'rsquared_adj':
+            return pd.Series([res._adj_r2 for res in self.results])
+        
+        elif stat == 'rsquared_adj_within':
+            return pd.Series([res._adj_r2_within for res in self.results])
+        
+        elif stat == 'name':
+            return pd.Series(['OLS' for _ in self.results])
+        
+        else:
+            raise ValueError(f'Unknown stat: {stat}')
+
+    def _mark_sig(self, i):
+        '''
+        Marks the statistical significance of each parameter given an estimated model.
+        '''
+        s = ''
+        for c in self.params.columns:
+            coeff, p = self.params.loc[i, c], self.pvalues.loc[i, c]
+
+            s += f'{coeff.round(3)}*** ' if p < 0.01 else f'{coeff.round(4)}** ' if p < 0.05 else f'{coeff.round(5)}* ' if p < 0.1 else f'{coeff.round(6)} '
+
+            s += f'{"&" if c != self.params.columns[-1] else ""} '
+
+        return s
+
+    def params_latex(self):
+        lat = ''
+        for ind in self.params.index:
+            lat += '\n'.join([
+                f'{escape_for_latex(ind)} & {self._mark_sig(ind)} \\\\',
+                ''.join(
+                    [f' & ({str(std_error)})' for std_error in self.std_errors.loc[ind, :].round(4)] + [' \\\\']),
+                f' {" & " * len(self.results)} \\\\\n'
+            ])
+
+        return lat
+
+    def __repr__(self):
+        return ''.join(f'Model {i}\n{model}\n\n' for i, model in enumerate(self.results, 1))
+
+:::
+
+:::
+
+PREPARE_DATA.PY
+
+# --- Header -------------------------------------------------------------------
+# Prepares the "Explore Discretionary Accruals" display
+#
+# (C) TRR 266 -  See LICENSE file for details
+# ------------------------------------------------------------------------------
+
+from itertools import product
+
+from statsmodels.formula.api import ols
+import numpy as np
+import pandas as pd
+
+from utils import read_config, setup_logging
+
+log = setup_logging()
+global_cfg = read_config('config/global_cfg.yaml')
+
+def main():
+    log.info("Preparing base sample ...")
+
+    ff12 = pd.read_csv(global_cfg['fama_french_12'], dtype=object)
+    ff48 = pd.read_csv(global_cfg['fama_french_48'], dtype=object)
+
+    cstat_us_sample = pd.read_parquet(global_cfg['cstat_us_parquet_file'])
+    cstat_us_sample['gvkey'] = cstat_us_sample['gvkey'].astype(str)
+    
+    numeric_cols = [
+        'fyear', 'at', 'sale', 'ibc', 'oancf', 'ppegt', 'recch', 
+        'invch', 'apalch', 'txach', 'aoloch', 'csho', 'prcc_f',
+        'ceq', 'lt', 'ppent', 'intan', 'gdwl', 'aqs', 'acqsc',
+        'cogs', 'ib', 'xint'
+    ]
+    for col in numeric_cols:
+        if col in cstat_us_sample.columns:
+            cstat_us_sample[col] = pd.to_numeric(cstat_us_sample[col], errors='coerce')
+
+    us_base_sample = prep_us_base_sample(cstat_us_sample, ff12, ff48)
+
+    dup_obs = us_base_sample[us_base_sample.duplicated()]
+    assert dup_obs.shape[0] == 0, "Duplicate firm-year observations in Compustat data, stored in 'dup_obs'."
+
+    log.info("Calculating modified Jones discretionary accruals ...")
+    mj = estimate_mj_accruals(us_base_sample)
+
+    log.info("Calculating Dechow and Dichev discretionary accruals ...")
+    dd = estimate_dd_accruals(us_base_sample)
+
+    log.info("Merging data and preparing final sample ...")
+    np.seterr(divide='ignore')  # because np.log(0) throws a warning
+    smp = prep_smp(us_base_sample, mj, dd)
+    np.seterr(divide='warn')
+
+    smp.to_parquet(global_cfg['acc_sample'], index=False)
+    log.info(f"Final sample saved to '{global_cfg['acc_sample']}'.")
+
+
+def prep_us_base_sample(df, ff12, ff48):
+    df = df.astype({'sic': 'Int64', 'sich': 'Int64'})
+    df = (df
+          .assign(sic=lambda x: x["sich"].fillna(x["sic"]))
+          .query('indfmt == "INDL" & fic == "USA" & at.notna() & at > 0 & sale > 0')
+          .query('sic < 6000 | sic > 6999')
+          .query('sic.notna()')
+          .assign(sic=lambda x: x['sic'].astype(str).str.zfill(4))
+          .merge(ff48, how="left", on="sic")
+          .merge(ff12, how="left", on="sic")
+          .query('ff48_ind.notna() & ff12_ind.notna()')
+          .sort_values(["gvkey", "fyear"])
+          )
+    return df
+
+# --- Calculate modified Jones model accruals and statistics -------------------
+
+# Methodology is somewhat loosely based on Hribar and Nichols (JAR, 2007)
+# https://doi.org/10.1111/j.1475-679X.2007.00259.x
+
+
+def estimate_mj_accruals(df, min_obs=10):
+    df = (df
+          .assign(
+              lagta=lambda x: np.concatenate(
+                  [mleadlag(df['at'], -1, df['fyear']) for _, df in groupby(x, 'gvkey')]),
+              tacc=lambda x: groupby(x, 'gvkey').apply(
+                  lambda x: (x['ibc'] - x['oancf'])/x['lagta'], include_groups=False),
+              drev=lambda x: np.concatenate(
+                  [(df['sale'] - mleadlag(df['sale'], -1, df['fyear']) + df['recch'])/df['lagta'] for _, df in groupby(x, 'gvkey')]),
+              inverse_a=lambda x: groupby(
+                  x, 'gvkey').apply(lambda x: 1/x['lagta'], include_groups=False),
+              ppe=lambda x: groupby(x, 'gvkey').apply(
+                  lambda x: x['ppegt']/x['lagta'], include_groups=False))
+          .query('tacc.notna() & drev.notna() & ppe.notna()')
+          .filter(["gvkey", "ff48_ind", "fyear", "tacc", "drev", "inverse_a", "ppe"])
+          .groupby(['ff48_ind', 'fyear'])
+          .filter(lambda x: x['fyear'].count() >= min_obs)
+          .pipe(winsorize, drop="fyear")
+          )
+
+    model_df = pd.DataFrame(
+        df.groupby(['ff48_ind', 'fyear']).apply(
+            lambda x: pd.Series(
+                {'gvkey': x['gvkey'], 'model': accrual_model_mjones(x)}
+            ), include_groups=False)
+    )
+
+    mj_resids = (model_df
+                 .assign(mj_da=lambda x: x['model']
+                         .apply(lambda y: pd.Series([y.resid])))
+                 .filter(['gvkey', 'mj_da'])
+                 .apply(pd.Series.explode)
+                 .reset_index()
+                 )
+
+    mj_adjr2s = pd.DataFrame(model_df['model'].apply(
+        lambda x: pd.Series({'mj_nobs': x.nobs, 'mj_adjr2': x.rsquared_adj}))).reset_index()
+
+    mj_coefs = (pd.DataFrame(model_df['model'].apply(lambda x: x.params))
+                .rename(columns={c: 'mj_' + c.lower() for c in ['Intercept', 'inverse_a', 'drev', 'ppe']})
+                .reset_index()
+                )
+
+    mj = (mj_resids
+          .merge(mj_adjr2s, how="left", on=["ff48_ind", "fyear"])
+          .merge(mj_coefs, how="left", on=["ff48_ind", "fyear"]))
+
+    return mj
+
+# --- Calculate Dechow/Dichev accruals and statistics --------------------------
+
+# Methodology is based on Dechow and Dichev (TAR, 2002)
+# https://doi.org/10.2308/accr.2002.77.s-1.35
+
+
+def estimate_dd_accruals(df, min_obs=10):
+    df = (df
+          .assign(
+              avgta=lambda x: np.concatenate(
+                  [(df['at'] + mleadlag(df['at'], -1, df['fyear']))/2 for _, df in groupby(x, 'gvkey')]),
+              cfo=lambda x: groupby(x, 'gvkey').apply(
+                  lambda x: x['oancf']/x['avgta'], include_groups=False),
+              lagcfo=lambda x: np.concatenate(
+                  [mleadlag(df['cfo'], -1, df['fyear']) for _, df in groupby(x, 'gvkey')]),
+              leadcfo=lambda x: np.concatenate(
+                  [mleadlag(df['cfo'], +1, df['fyear']) for _, df in groupby(x, 'gvkey')]),
+              dwc=lambda x: groupby(x, 'gvkey').apply(
+                  lambda x: -(x['recch'] + x['invch'] + x['apalch'] + x['txach'] + x['aoloch'])/x['avgta'], include_groups=False))
+          .query('dwc.notna() & cfo.notna() & lagcfo.notna() & leadcfo.notna()')
+          .filter(["gvkey", "ff48_ind", "fyear", "dwc", "cfo", "lagcfo", "leadcfo"])
+          .groupby(['ff48_ind', 'fyear'])
+          .filter(lambda x: x['fyear'].count() >= min_obs)
+          .pipe(winsorize, drop="fyear")
+          )
+
+    model_df = pd.DataFrame(
+        df.groupby(['ff48_ind', 'fyear']).apply(lambda x: pd.Series(
+            {'gvkey': x['gvkey'], 'model': accrual_model_dd(x)}
+        ), include_groups=False)
+    )
+
+    dd_resids = (model_df
+                 .assign(dd_da=lambda x: x['model']
+                         .apply(lambda y: pd.Series([y.resid])))
+                 .filter(['gvkey', 'dd_da'])
+                 .apply(pd.Series.explode)
+                 .reset_index()
+                 )
+
+    dd_adjr2s = pd.DataFrame(model_df['model'].apply(
+        lambda x: pd.Series({'dd_nobs': x.nobs, 'dd_adjr2': x.rsquared_adj}))).reset_index()
+
+    dd_coefs = (pd.DataFrame(model_df['model'].apply(lambda x: x.params))
+                .rename(columns={c: 'dd_' + c.lower() for c in ['Intercept', 'lagcfo', 'cfo', 'leadcfo']})
+                .reset_index()
+                )
+
+    dd = (dd_resids
+          .merge(dd_adjr2s, how="left", on=["ff48_ind", "fyear"])
+          .merge(dd_coefs, how="left", on=["ff48_ind", "fyear"]))
+
+    return dd
+
+
+def accrual_model_mjones(df):
+    return ols('tacc ~ inverse_a + drev + ppe', df).fit()
+
+
+def accrual_model_dd(df):
+    return ols('dwc ~ lagcfo + cfo + leadcfo', df).fit()
+
+
+def mleadlag(x, n, ts_id):
+    return np.where(ts_id == ts_id.shift(-n) - n, x.shift(-n), np.nan)
+
+
+def groupby(x, by):
+    return x.groupby(by, group_keys=False)
+
+
+def treat_vector_outliers(x, percentile=0.01, truncate=False):
+    '''
+    Treats numerical outliers either by winsorizing or by truncating.
+    '''
+
+    if not np.issubdtype(x.dtype, np.number):
+        return x
+
+    x = np.array(x, copy=True)
+
+    lim = np.quantile(x, [percentile, 1-percentile])
+
+    if truncate:
+        x[x < lim[0]] = np.nan
+        x[x > lim[1]] = np.nan
+    else:
+        x[x < lim[0]] = lim[0]
+        x[x > lim[1]] = lim[1]
+    return x
+
+
+def treat_outliers(df, percentile=0.01, truncate=False, by=None):
+    if by:
+        return groupby(df, by).apply(lambda sub_group: sub_group.apply(lambda x: treat_vector_outliers(x, percentile, truncate)))
+    else:
+        return df.apply(lambda x: treat_vector_outliers(x, percentile, truncate))
+
+
+def winsorize(df, drop=None, **kwargs):
+    '''
+    Treats the outliers of all numerical columns in df, except the ones in drop.
+    '''
+
+    if drop:
+        _vars = [c for c in list(df) if c not in drop]
+        df.loc[:, _vars] = treat_outliers(df.loc[:, _vars], **kwargs)
+    else:
+        df = treat_outliers(df, **kwargs)
+    return df
+
+
+def prep_smp(us_base_sample, mj, dd):
+    smp = expand_grid(us_base_sample['gvkey'],
+                      us_base_sample['fyear'], ['gvkey', 'fyear'])
+
+    smp = (smp
+           .sort_values(["gvkey", "fyear"])
+           .merge(us_base_sample, how="left", on=["gvkey", "fyear"])
+           .merge(mj, how="left", on=["gvkey", "fyear"])
+           .merge(dd, how="left", on=["gvkey", "fyear"])
+           .assign(
+               ta=lambda x: x['at'],
+               avgta=lambda x: (x['at'] + x['at'].shift(1))/2,
+               sales=lambda x: x['sale'],
+               mktcap=lambda x: x['csho'] * x['prcc_f'],
+               ln_ta=lambda x: np.log(x['at']),
+               ln_sales=lambda x: np.log(x['sales']),
+               ln_mktcap=lambda x: np.log(x['mktcap']),
+               mtb=lambda x: (x['csho'] * x['prcc_f'])/x['ceq'],
+               sales_growth=lambda x: np.log(
+                   x['sale'])/np.log(x['sale'].shift(1)),
+               leverage=lambda x: x['lt']/x['at'],
+               ppe_ta=lambda x: x['ppent']/x['at'],
+               int_ta=lambda x: x['intan']/x['at'],
+               gwill_ta=lambda x: x['gdwl']/x['at'],
+               acq_sales=lambda x: x['aqs'].add(
+                   x['acqsc'], fill_value=0)/x['sale'],
+               cogs_sales=lambda x: x['cogs']/x['sale'],
+               ebit_sales=lambda x: (x['ib'] + x['xint'])/x['sale'],
+               ebit_avgta=lambda x: (x['ib'] + x['xint'])/x['avgta'],
+               cfo_avgta=lambda x: x['oancf']/x['avgta'],
+               tacc_avgta=lambda x: (x['ibc'] - x['oancf'])/x['avgta'],
+               ceq_ta=lambda x: x['ceq']/x['at'],
+               mj_ada=lambda x: abs(x['mj_da']),
+               dd_ada=lambda x: abs(x['dd_da']))
+           .filter(['gvkey', 'conm', 'fyear', 'ff12_ind', 'ff48_ind', 'ta', 'sales', 'mktcap', 'ln_ta', 'ln_sales', 'ln_mktcap', 'mj_da', 'dd_da', 'mj_ada', 'dd_ada', 'mj_nobs', 'dd_nobs', 'mtb', 'sales_growth', 'leverage', 'ppe_ta', 'int_ta', 'gwill_ta', 'ceq_ta', 'acq_sales', 'cogs_sales', 'ebit_sales', 'ebit_avgta', 'cfo_avgta', 'tacc_avgta'])
+           .query('mj_da.notna()')
+           )
+
+    return smp
+
+
+def expand_grid(x, y, col_name):
+    df = pd.DataFrame(
+        list(product(x.unique(), y.unique())), columns=col_name)
+    return df
+
+
+if __name__ == "__main__":
+    main()
+
+:::
+
+:::
+
+PULL_WRDS_DATA.PY
+
+# ------------------------------------------------------------------------------
+# Downloads WRDS data to local parquet files using a duckdb workflow
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+# Good starting points to learn more about this workflow are
+# - The support pages of WRDS (they also contain the data documentation)
+# - The wonderful textbook by Ian Gow (https://iangow.github.io/far_book/),
+#   in particular App. D and E
+
+import os
+from pathlib import Path
+from datetime import datetime
+import duckdb
+from dotenv import load_dotenv
+
+from utils import read_config, setup_logging
+
+log = setup_logging()
+global_cfg = read_config('config/global_cfg.yaml')
+
+
+def main():
+    """
+    Main function to pull data from WRDS using DuckDB.
+    
+    This function reads the configuration file, connects to WRDS via DuckDB's
+    PostgreSQL extension, and pulls the data from WRDS by executing a SQL query
+    that joins tables server-side before downloading. This is much more efficient
+    than downloading separate tables and merging locally.
+    """
+    cfg = read_config('config/pull_wrds_data_cfg.yaml')
+    secrets = read_secrets()
+    
+    con = connect_duckdb()
+    link_wrds_to_duckdb(con, secrets)
+    log.info("Linked WRDS to local DuckDB instance.")
+    
+    log.info("Pulling Compustat data")
+    query = build_compustat_query(cfg, con)
+    
+    query_wrds_to_parquet(
+        con, 
+        query, 
+        global_cfg['cstat_us_parquet_file'],
+        force=cfg['force_redownload']
+    )
+    
+    shutdown_duckdb(con)
+    log.info("Disconnected from WRDS")
+
+
+def read_secrets():
+    """
+    Reads WRDS credentials from secrets file.
+    
+    Returns:
+        dict: Dictionary with 'wrds_user' and 'wrds_pwd' keys
+    """
+    secrets_file = global_cfg['secrets_file']
+    if not os.path.exists(secrets_file):
+        raise FileNotFoundError(
+            f"Secrets file '{secrets_file}' not found. "
+            "Please create it with WRDS_USERNAME and WRDS_PASSWORD."
+        )
+    
+    load_dotenv(secrets_file)
+    wrds_user = os.getenv('WRDS_USERNAME')
+    wrds_pwd = os.getenv('WRDS_PASSWORD')
+    
+    if not wrds_user or not wrds_pwd:
+        raise ValueError(
+            "WRDS_USERNAME and WRDS_PASSWORD must be set in secrets file"
+        )
+    
+    return {'wrds_user': wrds_user, 'wrds_pwd': wrds_pwd}
+
+
+def connect_duckdb(dbase_path=":memory:"):
+    """
+    Creates a DuckDB connection.
+    
+    Args:
+        dbase_path: Path to database file, or ":memory:" for in-memory database
+        
+    Returns:
+        duckdb.DuckDBPyConnection: Database connection
+    """
+    return duckdb.connect(dbase_path)
+
+
+def shutdown_duckdb(con):
+    """
+    Properly shuts down DuckDB connection.
+    
+    Args:
+        con: DuckDB connection to close
+    """
+    con.close()
+
+
+def link_wrds_to_duckdb(con, secrets):
+    """
+    Attaches WRDS PostgreSQL database to DuckDB.
+    
+    This allows querying WRDS tables directly through DuckDB using the 'wrds' schema.
+    
+    Args:
+        con: DuckDB connection
+        secrets: Dictionary with 'wrds_user' and 'wrds_pwd' keys
+    """
+    attach_query = f"""
+        INSTALL postgres;
+        LOAD postgres;
+        SET pg_connection_limit=4;
+        ATTACH 'dbname=wrds host=wrds-pgdata.wharton.upenn.edu port=9737 
+                user={secrets['wrds_user']} password={secrets['wrds_pwd']}' 
+        AS wrds (TYPE postgres, READ_ONLY);
+    """
+    con.execute(attach_query)
+
+
+def build_compustat_query(cfg, con):
+    """
+    Builds the SQL query to pull Compustat data from WRDS.
+    
+    The query joins the static company table with the dynamic funda table
+    on the server side before downloading, which is much more efficient.
+    
+    Uses USING (gvkey) to automatically handle the join key and avoid duplication.
+    
+    Args:
+        cfg: Configuration dictionary
+        con: DuckDB connection
+        
+    Returns:
+        str: SQL query string
+    """
+    dyn_vars = cfg['dyn_vars']
+    stat_vars = cfg['stat_vars']
+    cs_filter = cfg['cs_filter']
+    
+    dyn_vars_quoted = [f'"{var}"' for var in dyn_vars]
+    stat_vars_quoted = [f'"{var}"' for var in stat_vars]
+    
+    dyn_vars_str = ', '.join(dyn_vars_quoted)
+    stat_vars_str = ', '.join(stat_vars_quoted)
+    
+    query = (
+        f"SELECT * FROM "
+        f"(SELECT {stat_vars_str} FROM wrds.comp.company) "
+        f"JOIN (SELECT {dyn_vars_str} FROM wrds.comp.funda WHERE {cs_filter}) "
+        f'USING ("gvkey")'
+    )
+    
+    return query
+
+
+def query_wrds_to_parquet(con, query, parquet_file, force=False):
+    """
+    Executes a query on WRDS and saves the result to a parquet file.
+    
+    Args:
+        con: DuckDB connection with WRDS attached
+        query: SQL query string
+        parquet_file: Path to output parquet file
+        force: If True, re-download even if file exists
+    """
+    time_in = datetime.now()
+    
+    if os.path.exists(parquet_file) and not force:
+        log.info(
+            f"Parquet file '{parquet_file}' exists. "
+            "Skipping it but updating its mtime. "
+            "Delete it if you want to re-download"
+        )
+        Path(parquet_file).touch()
+        return
+    
+    query_clean = ' '.join(query.split())
+    
+    copy_query = f"COPY ({query_clean}) TO '{parquet_file}' (FORMAT 'parquet')"
+    result = con.execute(copy_query)
+    row_count = result.fetchone()[0] if result else 0
+    
+    time_spent = datetime.now() - time_in
+    log.info(
+        f"Query result saved to '{parquet_file}': "
+        f"rows: {row_count:,}, "
+        f"time spent: {time_spent}"
+    )
+
+
+if __name__ == '__main__':
+    main()
+
+:::
+
+:::
+
+THEME_TRR.PY
+
+from colorsys import hls_to_rgb, rgb_to_hls
+
+from plotnine import (element_blank, element_line, element_text,
+                      scale_color_gradient, scale_color_manual,
+                      scale_fill_gradient, scale_fill_manual, theme,
+                      theme_gray)
+
+
+def theme_trr(plot_type="default", legend=False, text_size=11, axis_y_horizontal=True):
+
+    plot_type = plot_type.lower()
+    valid_plots = ["bar", "box", "lollipop", "line",
+                   "scatter", "smoother", "default"]
+    if not plot_type in valid_plots:
+        raise ValueError(
+            "theme_trr: plot_type has to be 'default', 'bar', 'box', 'lollipop','line', 'scatter' or 'smoother'."
+        )
+
+    return (
+        theme_gray(base_family="sans") +
+        theme(
+            text=element_text(size=text_size),
+            axis_title_y=element_text(
+                angle=0) if axis_y_horizontal else element_text(angle=90),
+            axis_ticks=element_blank(),
+            axis_line=element_blank() if plot_type in [
+                "line", "scatter", "default"] else element_line(size=0.3, lineend="round"),
+            legend_position="top" if legend else "none",
+            legend_background=element_blank(),
+            legend_margin=1,
+            legend_key=element_blank(),
+            legend_direction="horizontal",
+            legend_box_background=element_blank(),
+            panel_background=element_blank(),
+            panel_grid=element_line(color="#EBEBEBFF", size=0.4),
+            panel_grid_minor_x=element_blank() if plot_type in [
+                "bar", "box", "line", "smoother", "default"] else None,
+            panel_grid_major_x=element_blank() if plot_type in [
+                "bar", "box", "line", "scatter", "default"] else None,
+            panel_grid_minor_y=element_blank() if plot_type in [
+                "lollipop", "scatter", "smoother"] else None,
+            panel_grid_major_y=element_blank() if plot_type == "lollipop" else None,
+            plot_background=element_blank(),
+            plot_title=element_text(weight="bold")
+        )
+    )
+
+
+col_trr266_petrol = "#1B8A8F"
+col_trr266_yellow = "#FFB43B"
+col_trr266_blue = "#6ECAE2"
+col_trr266_red = "#944664"
+col_trr266_nightblue = "#22355D"
+col_trr266_iceblue = "#1D758D"
+col_trr266_darkgreen = "#224B4F"
+
+trr266_colors = [
+    col_trr266_petrol, col_trr266_yellow, col_trr266_blue, col_trr266_red, col_trr266_nightblue, col_trr266_iceblue, col_trr266_darkgreen
+]
+
+
+def scale_fill_trr266_d(**kwargs):
+    return scale_fill_manual([col+'FF' for col in trr266_colors], **kwargs)
+
+
+def scale_fill_trr266_c(base_color: str = col_trr266_petrol, **kwargs):
+    return scale_fill_gradient(lighten(base_color, 0.9), base_color, **kwargs)
+
+
+def scale_color_trr266_d(**kwargs):
+    return scale_color_manual([col+'FF' for col in trr266_colors], **kwargs)
+
+
+def scale_color_trr266_c(base_color: str = col_trr266_petrol, **kwargs):
+    return scale_color_gradient(lighten(base_color, 0.9), base_color, **kwargs)
+
+
+def lighten(color: str, factor: float):
+    '''
+    Takes a hex color code and lightens it by a given factor.
+    '''
+    color = color.lstrip('#')
+    r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    h, l, s = rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+    l = max(min(l * (1 + factor), 1.0), 0.0)
+    r, g, b = hls_to_rgb(h, l, s)
+    r, g, b = int(r * 255), int(g * 255), int(b * 255)
+    return "#%02x%02x%02x" % (r, g, b)
+
+:::
+
+:::
+
+UTILS.PY
+
+import logging
+import yaml
+
+def read_config(config_file):
+    '''
+    Reads the configuration yaml file.
+    '''
+    return yaml.safe_load(open(config_file, 'r'))
+
+
+def setup_logging():
+    '''
+    Sets up the logging configuration.
+    '''
+    cfg = read_config('config/global_cfg.yaml')
+    if cfg.get('log_file').lower() != 'stdout':
+        log_file = cfg.get('log_file', None)
+    else:
+        log_file = None
+    if cfg.get('log_level') != '':
+        log_level = cfg.get('log_level', 'INFO').upper()
+    else:
+        log_level = 'INFO'
+    
+    logging.basicConfig(
+        filename=log_file,
+        level=log_level,
+        format="%(levelname)s [%(asctime)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    log = logging.getLogger(__name__)
+    return log
+:::
+
+:::
+
+DO_ANALYSIS.R
+
+# ------------------------------------------------------------------------------
+# Prepares figures and tables for our showcase project, exploring discretionary
+# accruals.
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+
+# --- Read config --------------------------------------------------------------
+
+source("code/R/utils.R")
+
+
+# --- Read TRR 266 ggplot2 theme -----------------------------------------------
+
+source("code/R/theme_trr.R")
+
+
+# --- Create tables and figures ------------------------------------------------
+
+log_info("Reading and preparing data...")
+smp <- read_parquet(global_cfg$acc_sample)
+
+graph_boxplot <- function(df) {
+  df <- df %>%
+    select(fyear, mj_da, dd_da) %>%
+    filter(!is.na(dd_da)) %>%
+    pivot_longer(
+      any_of(c("mj_da", "dd_da")), names_to = "type", values_to = "da"
+    )
+
+  ggplot(
+    df,
+    aes(x = fyear, y = da, group = interaction(type, fyear), color = type)
+  ) +
+    geom_boxplot() +
+    labs(
+      x = "Fiscal year", y = NULL, color = "Type of discretionary accruals"
+    ) +
+    scale_color_trr266_d(labels = c("Dechow and Dichev", "Modified Jones")) +
+    theme_trr(legend = TRUE)
+}
+
+smp_da <- smp %>%
+  select(
+    gvkey, fyear, ff12_ind, mj_da, dd_da, ln_ta, ln_mktcap, mtb,
+    ebit_avgta, sales_growth
+  )
+
+smp_da <- smp_da[is.finite(rowSums(smp_da %>% select(-gvkey, -ff12_ind))), ]
+
+smp_da <- treat_outliers(smp_da, by = "fyear")
+
+log_info("Preparing figures...")
+
+fig_boxplot_full <- graph_boxplot(smp)
+fig_boxplot_smp <- graph_boxplot(smp_da)
+
+fig_scatter_md_dd <- ggplot(smp_da, aes(x = mj_da, y = dd_da)) +
+  geom_bin2d(
+    aes(fill = stat(log(count))),  bins = c(100, 100)
+  ) +
+  labs(x = "Modified Jones DA", y = "Dechow and Dichev DA") +
+  scale_fill_trr266_c() +
+  theme_trr(axis_y_horizontal = FALSE)
+
+fig_scatter_dd_lnta <- ggplot(smp_da, aes(x = ln_ta, y = dd_da)) +
+  geom_bin2d(
+    aes(fill = stat(log(count))),  bins = c(100, 100)
+  ) +
+  labs(x = "ln(Total Assets)", y = "Dechow and Dichev DA") +
+  scale_fill_trr266_c() +
+  theme_trr(axis_y_horizontal = FALSE)
+
+fig_scatter_dd_roa <- ggplot(smp_da, aes(x = ebit_avgta, y = dd_da)) +
+  geom_bin2d(
+    aes(fill = stat(log(count))),  bins = c(100, 100)
+  ) +
+  labs(x = "Return on Assets", y = "Dechow and Dichev DA") +
+  scale_fill_trr266_c() +
+  theme_trr(axis_y_horizontal = FALSE)
+
+fig_scatter_dd_salesgr <- ggplot(smp_da, aes(x = sales_growth, y = dd_da)) +
+  geom_bin2d(
+    aes(fill = stat(log(count))),  bins = c(100, 100)
+  ) +
+  labs(x = "Sales Growth", y = "Dechow and Dichev DA") +
+  scale_fill_trr266_c() +
+  theme_trr(axis_y_horizontal = FALSE)
+
+log_info("Preparing tables...")
+
+var_names <- tibble(
+  var_name = names(smp_da %>% select(-gvkey, -fyear, -ff12_ind)),
+  label = cdesc_rnames <- c(
+    "Modified Jones DA",
+    "Dechow and Dichev DA",
+    "Ln(Total assets)",
+    "Ln(Market capitalization)",
+    "Market to book",
+    "Return on assets",
+    "Sales growth"
+  )
+)
+
+N <- function(x) (format(sum(!is.na(x)), big.mark = ","))
+desc_smp <- smp_da %>% select(-c(fyear, gvkey, ff12_ind))
+colnames(desc_smp) <- var_names$label
+tab_desc_stat <- datasummary(
+  All(desc_smp) ~ N + Mean + SD + Min + P25 + Median + P75 + Max, 
+  data = desc_smp, fmt = 3, output = "gt"
+)
+
+
+rlabels <- paste0(
+  LETTERS[1:nrow(var_names)], ": ", colnames(desc_smp)
+)
+clabels <- c(" ", LETTERS[1:nrow(var_names)])
+names(clabels) <- c(" ", rlabels)
+colnames(desc_smp) <- rlabels
+tab_corr <-datasummary_correlation(
+  desc_smp, method = "pearspear", output = "gt"
+) %>% cols_label(!!!clabels)
+
+mods <- feols(
+  c(mj_da, dd_da) ~ ln_ta + mtb + ebit_avgta + sales_growth | gvkey + fyear,
+  smp_da, cluster = c("gvkey", "fyear")
+)
+for (i in 1:2) {
+  mods[[i]]$singletons <- mods[[i]]$nobs_orig - mods[[i]]$nobs
+}
+
+names(mods) <- var_names$label[1:2]
+ar <- tibble(
+  col1 = c(
+    "Observations", "Singletons dropped", "Observations used", 
+    "Fixed Effects", "SE Clustered"
+  ),
+  col2 = c(
+    format(mods[[1]]$nobs_orig, big.mark = ","),
+    format(mods[[1]]$singletons, big.mark = ","),
+    format(mods[[1]]$nobs, big.mark = ","),
+    "Firm and Year", "Firm and Year"
+  ),
+  col3 = c(
+    format(mods[[2]]$nobs_orig, big.mark = ","),
+    format(mods[[2]]$singletons, big.mark = ","),
+    format(mods[[2]]$nobs, big.mark = ","),
+    "Firm and Year", "Firm and Year"
+  )
+)
+attr(ar, "position") <- 9:13
+
+tab_regression <- modelsummary(
+  mods, stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+  estimate = "{estimate}{stars}",
+  add_rows = ar,
+  gof_map = list(
+    list(
+      raw = "adj.r.squared", 
+      clean = "Adj. R² (overall)", 
+      fmt = function(x) sprintf("%.3f", x)
+    ),
+    list(
+      raw = "r2.within.adjusted", clean = "Adj. R² (within)", 
+      fmt = function(x) sprintf("%.3f", x)
+    )
+  ),
+  coef_rename = var_names$label[c(3, 5:7)],
+  output = "gt"
+)
+
+log_info("Done. Storing output objects in '{global_cfg$results_r}'")
+save(
+  list = c(
+    "smp_da", "var_names", ls(pattern = "^fig_*"), ls(pattern = "^tab_*")
+  ),
+  file = global_cfg$results_r
+)
+
+:::
+
+:::
+
+PREPARE_DATA.R
+
+# ------------------------------------------------------------------------------
+# Calculates modified Jones and Dechow/Dichev discretionary accruals and
+# prepares final sample for analysis.
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+# --- Read config and utility functions ----------------------------------------
+
+source("code/R/utils.R")
+
+
+# --- Some helper functions ----------------------------------------------------
+
+accrual_model_mjones <- function(df) {
+  lm(tacc ~ inverse_a + drev + ppe, data = df)
+}
+
+accrual_model_dd <- function(df) {
+  lm(dwc ~ lagcfo + cfo + leadcfo, data = df)
+}
+
+tcoef <- function(m) {as_tibble(t(coef(m)))}
+
+mleadlag <- function(x, n, ts_id) {
+  pos <- match(as.numeric(ts_id) + n, as.numeric(ts_id))
+  x[pos]
+}
+
+winsorize <- function(df, drop = NULL, ...) {
+  if(is.null(drop)) treat_outliers(df, ...)
+  else {
+    vars <- !(names(df) %in% drop)
+    ret <- df
+    ret[vars] <- treat_outliers(ret[vars], ...)
+    return(ret)
+  }
+}
+
+# --- Prepare base sample ------------------------------------------------------
+
+log_info("Preparing base sample ...")
+
+ff12 <- read_csv(global_cfg$fama_french_12, col_types = cols())
+ff48 <- read_csv(global_cfg$fama_french_48, col_types = cols())
+
+us_base_sample <- read_parquet(global_cfg$cstat_us_parquet_file) %>%
+  filter(
+    indfmt == "INDL",
+    fic == "USA",
+    !is.na(at),
+    at > 0,
+    sale > 0
+  ) %>%
+  mutate(sic = ifelse(!is.na(sich), sprintf("%04d", sich), sic)) %>%
+  filter(
+    !is.na(sic),
+    as.numeric(sic) < 6000 | as.numeric(sic) > 6999
+  ) %>%
+  left_join(ff48, by = "sic") %>%
+  left_join(ff12, by = "sic") %>%
+  filter(!is.na(ff48_ind) & !is.na(ff12_ind)) 
+
+us_base_sample %>%
+  group_by(gvkey, fyear) %>%
+  filter(n() > 1) -> dup_obs
+
+if(nrow(dup_obs) > 0) stop(
+  "Duplicate firm-year observations in Compustat data, stored in 'dup_obs'."
+)
+
+
+# --- Calculate modified Jones model accruals and statistics -------------------
+
+# Methodology is somewhat loosely based on Hribar and Nichols (JAR, 2007)
+# https://doi.org/10.1111/j.1475-679X.2007.00259.x
+
+estimate_mj_accruals <- function(df, min_obs = 10) {
+  mj <- df %>%
+    group_by(gvkey) %>%
+    mutate(
+      lagta = mleadlag(at, -1, fyear),
+      tacc = (ibc - oancf)/lagta,
+      drev = (sale - mleadlag(sale, -1, fyear) + recch)/lagta,
+      inverse_a = 1/lagta,
+      ppe = ppegt/lagta
+    ) %>%
+    filter(
+      !is.na(tacc),
+      !is.na(drev),
+      !is.na(ppe)
+    ) %>%
+    select(gvkey, ff48_ind, fyear, tacc, drev, inverse_a, ppe) %>%
+    group_by(ff48_ind, fyear) %>%
+    filter(n() >= min_obs) %>%
+    winsorize(drop = "fyear") %>%
+    nest() %>%
+    mutate(model = map(data, accrual_model_mjones))
+  
+  mj_resids <- mj %>%
+    mutate(resids = map2(data, model, add_residuals)) %>%
+    unnest(resids) %>%
+    mutate(mj_da = unname(resid)) %>%
+    select(gvkey, fyear, ff48_ind, mj_da)
+  
+  mj_adjr2s <- mj %>%
+    mutate(glance = map(model, glance)) %>%
+    unnest(glance) %>%
+    rename(
+      mj_nobs = nobs,
+      mj_adjr2 = adj.r.squared
+    ) %>%
+    select(ff48_ind, fyear, mj_nobs, mj_adjr2)
+  
+  mj_coefs <- mj %>%
+    mutate(coef = map(model, tcoef)) %>%
+    select(ff48_ind, fyear, coef) %>%
+    unnest(coef) %>%
+    rename(mj_intercept = "(Intercept)",
+           mj_inverse_a = inverse_a,
+           mj_drev = drev,
+           mj_ppe = ppe)
+  
+  mj_resids %>%
+    left_join(mj_adjr2s, by = c("ff48_ind", "fyear")) %>%
+    left_join(mj_coefs, by = c("ff48_ind", "fyear"))
+}
+
+
+
+# --- Calculate Dechow/Dichev accruals and statistics --------------------------
+
+# Methodology is based on Dechow and Dichev (TAR, 2002)
+# https://doi.org/10.2308/accr.2002.77.s-1.35
+
+estimate_dd_accruals <- function(df, min_obs = 10) {
+  dd <- df %>%
+    group_by(gvkey) %>%
+    mutate(avgta = (at + mleadlag(at, -1, fyear))/2,
+           cfo = oancf/avgta,
+           lagcfo = mleadlag(cfo, -1, fyear),
+           leadcfo = mleadlag(cfo, +1, fyear),
+           dwc = -(recch + invch + apalch + txach + aoloch)/avgta) %>%
+    filter(!is.na(dwc),
+           !is.na(cfo),
+           !is.na(lagcfo),
+           !is.na(leadcfo)) %>%
+    select(gvkey, ff48_ind, fyear, dwc, cfo, lagcfo, leadcfo) %>%
+    group_by(ff48_ind, fyear) %>%
+    filter(n() >= min_obs) %>%
+    winsorize(drop = "fyear") %>%
+    nest() %>%
+    mutate(model = map(data, accrual_model_dd)) 
+  
+  dd_resids <- dd %>%
+    mutate(resids = map2(data, model, add_residuals)) %>%
+    unnest(resids) %>%
+    mutate(dd_da = unname(resid)) %>%
+    select(gvkey, ff48_ind, fyear, dd_da)
+  
+  dd_adjr2s <- dd %>%
+    mutate(glance = map(model, glance)) %>%
+    unnest(glance) %>%
+    rename(
+      dd_nobs = nobs,
+      dd_adjr2 = adj.r.squared
+    ) %>%
+    select(ff48_ind, fyear, dd_nobs, dd_adjr2)
+  
+  dd_coefs <- dd %>%
+    mutate(coef = map(model, tcoef)) %>%
+    select(ff48_ind, fyear, coef) %>%
+    unnest(coef) %>%
+    rename(dd_intercept = "(Intercept)",
+           dd_lagcfo = lagcfo,
+           dd_cfo = cfo,
+           dd_leadcfo = leadcfo)
+
+  dd_resids %>%
+    left_join(dd_adjr2s, by = c("ff48_ind", "fyear")) %>%
+    left_join(dd_coefs, by = c("ff48_ind", "fyear"))
+}
+
+
+# --- Merge data and prepare samples -------------------------------------------
+
+log_info("Calculating modified Jones discretionary accruals ...")
+mj <- estimate_mj_accruals(us_base_sample) 
+
+log_info("Calculating Dechow and Dichev discretionary accruals ...")
+dd <- estimate_dd_accruals(us_base_sample) 
+
+log_info("Merging data and preparing final sample ...")
+smp<- expand_grid(
+  gvkey = unique(us_base_sample$gvkey),
+  fyear = unique(us_base_sample$fyear)
+) %>%
+  arrange(gvkey, fyear) %>%
+  left_join(us_base_sample, by = c("gvkey", "fyear")) %>%
+  left_join(mj, by = c("gvkey", "fyear")) %>%
+  left_join(dd, by = c("gvkey", "fyear")) %>%
+  mutate(
+    ta = at,
+    avgta = (at + lag(at))/2,
+    sales = sale,
+    mktcap = csho * prcc_f,
+    ln_ta = log(at),
+    ln_sales = log(sales),
+    ln_mktcap = log(mktcap),
+    mtb = (csho * prcc_f)/ceq,
+    sales_growth = log(sale)/log(lag(sale)),
+    leverage = lt/at,
+    ppe_ta = ppent/at,
+    int_ta = intan/at,
+    gwill_ta = gdwl/at,
+    acq_sales = (ifelse(!is.na(aqs), aqs, 0) + 
+                   ifelse(!is.na(acqsc), acqsc, 0))/sale,
+    cogs_sales = cogs/sale,
+    ebit_sales = (ib + xint)/sale,
+    ebit_avgta = (ib + xint)/avgta,
+    cfo_avgta = oancf/avgta,
+    tacc_avgta = (ibc - oancf)/avgta,
+    ceq_ta = ceq/at,
+    mj_ada = abs(mj_da),
+    dd_ada = abs(dd_da) 
+  ) %>%
+  select(
+    gvkey, conm, fyear, ff12_ind, ff48_ind,
+    ta, sales, mktcap, ln_ta, ln_sales, ln_mktcap,
+    mj_da, dd_da, mj_ada, dd_ada, mj_nobs, dd_nobs,
+    mtb, sales_growth, leverage,
+    ppe_ta, int_ta, gwill_ta, ceq_ta, leverage, 
+    acq_sales, cogs_sales, ebit_sales, 
+    ebit_avgta, cfo_avgta, tacc_avgta
+  ) %>% filter(!is.na(mj_da))
+
+write_parquet(smp, global_cfg$acc_sample)
+log_info("Final sample saved to '{global_cfg$acc_sample}'.")
+:::
+
+:::
+
+PULL_WRDS_DATA.R
+
+# ------------------------------------------------------------------------------
+# Downloads WRDS data to local parquet files using a duckdb workflow
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+# Good starting points to learn more about this workflow are
+# - The support pages of WRDS (they also contain the data documentation)
+# - The wonderful textbook by Ian Gow (https://iangow.github.io/far_book/),
+#   in particular App. D and E
+
+source("code/R/utils.R")
+cfg <- read_config("config/pull_wrds_data_cfg.yaml")
+
+# Downloading data from WRDS is resource intensive. So, by default,
+# this code only downloads data if it is not available locally.
+# You can set the `force_redownload` config variable to bypass this behavior
+
+# Also the config file specifies which tables to download, the variables
+# to keep and filters to apply. You can modify these as needed.
+
+# The secrets file should contain your WRDS login data
+secrets <- read_secrets()
+
+
+# --- Some helper functions to connect to duckdb and WRDS ----------------------
+
+connect_duckdb <- function(dbase_path = ":memory:") {
+  dbConnect(
+    duckdb::duckdb(), dbase_path
+  )
+}
+
+shutdown_duckdb <- function(con) {
+  dbDisconnect(con, shutdown = TRUE)
+}
+
+link_wrds_to_duckdb <- function(con) {
+  rv <- dbExecute(
+    con, sprintf(paste(
+      "INSTALL postgres;",
+      "LOAD postgres;",
+      "SET pg_connection_limit=4;",
+      "ATTACH '",
+      "dbname=wrds host=wrds-pgdata.wharton.upenn.edu port=9737",
+      "user=%s password=%s' AS wrds (TYPE postgres, READ_ONLY)"
+    ), secrets$wrds_user, secrets$wrds_pwd)
+  )
+}
+
+list_wrds_libs_and_tables <- function(con) {
+  dbGetQuery(
+    con, "SHOW ALL TABLES"
+  )
+}
+
+query_wrds_to_parquet <- function(con, query, parquet_file, force = FALSE) {
+  time_in <- Sys.time()
+  if (file.exists(parquet_file) & ! force) {
+    log_info(
+      "Parquet file '{parquet_file}' exists. ",
+      "Skipping it but updating its mtime. ",
+      "Delete it if you want to re-download"
+    )
+    Sys.setFileTime(parquet_file, Sys.time())
+    return(invisible())
+  }
+  rv <- dbExecute(
+    con, glue_sql(
+      "COPY ({query}) TO {parquet_file} (FORMAT 'parquet')",
+      .con = con
+    )
+  )
+  time_spent <- round(Sys.time() - time_in)
+  log_info(
+    "Query result saved to '{parquet_file}': ",
+    "rows: {format(rv, big.mark = ',')}, ",
+    "time spent: {as_hms(time_spent)}"
+  )
+}
+
+
+# --- Downloading U.S. Compustat data ------------------------------------------
+
+con <- connect_duckdb()
+link_wrds_to_duckdb(con)
+log_info("Linked WRDS to local Duck DB instance.")
+
+
+dyn_vars <- cfg$dyn_vars
+stat_vars <- cfg$stat_vars
+cs_filter <- cfg$cs_filter
+
+log_info("Pulling Compustat data")
+query <- glue_sql(
+  "select s.*, d.* from ",
+  "(select {`stat_vars`*} from wrds.comp.company) s ",
+  "join (select {`dyn_vars`*} from wrds.comp.funda ",
+  paste0("where ", cs_filter, ") d "),
+  "on (s.gvkey = d.gvkey)", .con = con, .literal = TRUE
+)
+
+query <- glue_sql(
+  "select * from ",
+  "(select {`stat_vars`*} from wrds.comp.company) ",
+  "join (select {`dyn_vars`*} from wrds.comp.funda ",
+  paste0("where ", cs_filter, ") "),
+  "using (gvkey)", .con = con
+)
+
+query_wrds_to_parquet(
+  con, query, global_cfg$cstat_us_parquet_file,
+  force = cfg$force_redownload
+)
+
+shutdown_duckdb(con)
+log_info("Disconnected from WRDS")
+
+:::
+
+:::
+
+THEME_TRR.R
+
+# ------------------------------------------------------------------------------
+# Our TRR 266 ggplot2 Theme
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+theme_trr <- function(
+  plot_type = "default", legend = FALSE, text_size = 11,
+  axis_y_horizontal = TRUE
+) {
+  plot_type <- if (!is.null(plot_type)) tolower(plot_type)
+
+  if (!plot_type %in% c(
+    "bar", "box", "lollipop", "line", "scatter", "smoother", "default"
+  )) {
+    stop(paste(
+      "theme_trr: plot_type has to be 'default', 'bar', 'box', 'lollipop'", 
+      "'line', 'scatter' or 'smoother'."
+    ))
+  }
+
+  base_theme <- function() {
+    theme_grey() +
+      theme(
+        text = element_text(size = text_size),
+        axis.title.y = if (axis_y_horizontal) {
+          element_text(angle = 0)
+        } else {
+          element_text(angle = 90)
+        },
+        axis.ticks = element_blank(),
+        axis.line = if (plot_type %in% c("line", "scatter", "default")) {
+          element_blank()
+        } else {
+          element_line(linewidth = 0.3, lineend = "round")
+        },
+        legend.position = if (legend) "top" else "none",
+        legend.background = element_blank(),
+        legend.margin = margin(1, 1, 1, 1),
+        legend.key = element_blank(),
+        legend.direction = "horizontal",
+        legend.box.background = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_line(colour = "#EBEBEBFF", linewidth = 0.4),
+        panel.grid.minor.x = if (!plot_type %in% c("lollipop", "scatter")) {
+          element_blank()
+        } else {
+          NULL
+        },
+        panel.grid.major.x = if (!plot_type %in% c("lollipop", "scatter")) {
+          element_blank()
+        } else {
+          NULL
+        },
+        panel.grid.major.y = if (plot_type %in% c("lollipop")) {
+          element_blank()
+        } else {
+          NULL
+        },
+        panel.grid.minor.y =
+          if (plot_type %in% c("lollipop", "scatter", "smoother")) {
+            element_blank()
+          } else {
+            NULL
+          },
+        plot.background = element_blank(),
+        plot.title = element_text(face = "bold")
+      )
+  }
+  base_theme()
+}
+
+col_trr266_petrol <- "#1B8A8F"
+col_trr266_yellow <- "#FFB43B"
+col_trr266_blue <- "#6ECAE2"
+col_trr266_red <- "#944664"
+col_trr266_nightblue <- "#22355D"
+col_trr266_iceblue <- "#1D758D"
+col_trr266_darkgreen <- "#224B4F"
+
+trr266_colors <- c(
+  col_trr266_petrol, col_trr266_yellow, col_trr266_blue,
+  col_trr266_red, col_trr266_nightblue, col_trr266_iceblue,
+  col_trr266_darkgreen
+)
+
+trr266_palette <- function() palette(trr266_colors)
+
+show_trr_colors <- function() {
+  scales::show_col(trr266_colors, ncol = 4, borders = NA)
+}
+
+scale_fill_trr266_d <- function(...) {
+  scale_fill_manual(values = c(
+    "#1B8A8FFF", "#FFB43BFF", "#6ECAE2FF", "#944664FF",
+    "#22355DFF", "#1D758DFF", "#224B4FFF"
+  ), ...)
+}
+
+scale_fill_trr266_c <- function(base_color = col_trr266_petrol, ...) {
+  scale_fill_gradient(
+    high = base_color, 
+    low = colorspace::lighten(base_color, 0.9), ...
+  )
+}
+
+scale_color_trr266_d <- function(...) {
+  scale_colour_manual(values = c(
+    "#1B8A8FFF", "#FFB43BFF", "#6ECAE2FF", "#944664FF",
+    "#22355DFF", "#1D758DFF", "#224B4FFF"
+  ), ...)
+}
+
+scale_color_trr266_c <- function(base_color = col_trr266_petrol, ...) {
+  scale_color_gradient(
+    high = base_color, 
+    low = colorspace::lighten(base_color, 0.9), ...
+  )
+}
+
+:::
+
+:::
+
+UTILS.R
+
+# ------------------------------------------------------------------------------
+# Code that should be included in all R scripts. Reads global config,
+# sets up logging, and provides utility functions.
+#
+# See LICENSE file for licensing information.
+# ------------------------------------------------------------------------------
+
+
+# --- Attach required R packages -----------------------------------------------
+
+# This attaches all packages that are required by any parts of the code. While
+# this technically is not required for each and any code file and might also
+# cause issues by conflicting namespaces, we follow this approach so that we
+# single consistent R session throughout our code base.
+
+suppressWarnings(suppressPackageStartupMessages({
+  library(logger)
+  library(glue)
+  library(dotenv)
+  library(yaml)
+	library(readr)
+	library(dplyr)
+	library(tidyr)
+	library(ggplot2)
+	library(purrr)
+	library(modelr)
+	library(broom)
+	library(lubridate)
+	library(hms)
+	library(duckdb)
+	library(arrow)
+	library(modelsummary)
+	library(fixest)
+	library(gt)
+}))
+
+
+# --- Reading configuration files ----------------------------------------------
+
+read_config <- function(config_file) {
+  read_yaml(config_file)
+}
+
+global_cfg <- read_config("config/global_cfg.yaml")
+
+read_secrets <- function() {
+  if (!file.exists(global_cfg$secrets_file)) {
+    log_error("Secrets file '{global_cfg$secrets_file}' not found. Exiting.")
+    stop(paste(
+      "Please copy '_{global_cfg$secrets_file}' to '{global_cfg$secrets_file}'",
+      "and edit it to contain your WRDS access data prior to running this code"
+    ))
+  }
+
+  load_dot_env("secrets.env")
+  list(
+    wrds_user = Sys.getenv("WRDS_USERNAME"),
+    wrds_pwd = Sys.getenv("WRDS_PASSWORD")
+  )
+}
+
+
+# --- Setting up logging -------------------------------------------------------
+
+if (!is.na(global_cfg$log_level) && global_cfg$log_level != "") {
+  log_threshold(toupper(global_cfg$log_level))
+}
+
+if (
+  !is.na(global_cfg$log_file) && global_cfg$log_file != "" &&
+    tolower(global_cfg$log_file) != "stdout"
+) {
+  log_appender(appender_file(global_cfg$log_file))
+}
+
+
+# --- Utility functions --------------------------------------------------------
+
+# --- Lend from ExPanDaR package
+treat_outliers <- function(
+  x, percentile = 0.01, truncate = FALSE, by = NULL, ...
+) {
+  treat_vector_outliers <- function(x, truncate, percentile, ...) {
+    lim <- quantile(
+      x, probs = c(percentile, 1 - percentile), na.rm = TRUE, ...
+    )
+    if (!truncate) {
+      x[x < lim[1]] <- lim[1]
+      x[x > lim[2]] <- lim[2]
+    } else {
+      x[x < lim[1]] <- NA
+      x[x > lim[2]] <- NA
+    }
+    x
+  }
+
+  if (!is.data.frame(x)) stop("'x' needs to be a data frame.")
+  lenx <- nrow(x)
+  if (!is.numeric(percentile) || (length(percentile) != 1)) 
+    stop("bad value for 'percentile': Needs to be a numeric scalar")
+  if (percentile <= 0 | percentile >= 0.5) {
+    stop("bad value for 'percentile': Needs to be > 0 and < 0.5")
+  }
+  if (length(truncate) != 1 || !is.logical(truncate)) 
+    stop("bad value for 'truncate': Needs to be a logical scalar")
+  if (!is.null(by)) {
+    by <- as.vector(x[[by]])
+    if (anyNA(by)) 
+      stop("by vector contains NA values")
+    if (length(by) != lenx) 
+      stop("by vector number of rows differs from x")
+  }
+  df <- x
+  x <- x[sapply(x, is.numeric)]
+  if (!is.numeric(as.matrix(x))) 
+    stop("bad value for 'x': needs to contain numeric vector or matrix")
+  x <- do.call(
+    data.frame, lapply(x, function(xv) replace(xv, !is.finite(xv), NA))
+  )
+  if (is.null(by)) {
+    retx <- as.data.frame(
+      lapply(
+        x, function(vx) treat_vector_outliers(
+          vx, truncate, percentile, ...
+        )
+      )
+    )
+  } else {
+    old_order <- (1:lenx)[order(by)]
+    retx <- do.call(
+      rbind, 
+      by(
+        x, by, 
+        function(mx) apply(mx, 2, function(vx) treat_vector_outliers(
+          vx, truncate, percentile, ...
+        ))
+      )
+    )
+    retx <- as.data.frame(retx[order(old_order), ])
+  }
+  df[colnames(retx)] <- retx
+  return(df)
+}
+
+
+:::
+
+:::
+
+GLOBAL_CFG.YAML
+
+# set the name of the project. This should be a short mnemonic and ideally
+# also the name of your repository
+project_name: treat
+
+# Output file names
+output_paper: output/treat_paper.pdf
+output_presentation: output/treat_presentation.pdf
+
+# Path to a file containing environment variables for sensitive information
+# WRDS login info in our case
+secrets_file: secrets.env
+
+# Possible values: debug, info, warn, error, fatal, off
+# The repo code only uses info and error levels so info is a good default
+log_level: info
+
+# Path to the log file - set to 'stdout' to log to console
+log_file: stdout
+
+# External data paths
+fama_french_12: data/external/fama_french_12_industries.csv
+fama_french_48: data/external/fama_french_48_industries.csv
+
+# File names for output objects that are used in multiple code steps
+cstat_us_parquet_file: data/pulled/cstat_us.parquet
+acc_sample: data/generated/acc_sample.parquet
+
+# Language dependent result objects
+results_python: output/results.pickle
+results_r: output/results.rda
+
+# Language dependent quarto documents
+paper_python: paper/paper_python.qmd
+paper_r: paper/paper_r.qmd
+presentation_python: paper/presentation_python.qmd
+presentation_r: paper/presentation_r.qmd
+
+
+:::
+
+:::
+
+PULL_WRDS_DATA_CFG.YAML
+
+force_redownload: true
+
+dyn_vars:
+    - gvkey
+    - conm
+    - cik
+    - fyear
+    - datadate
+    - indfmt
+    - sich
+    - consol
+    - popsrc
+    - datafmt
+    - curcd
+    - curuscn
+    - fyr
+    - act
+    - ap
+    - aqc
+    - aqs
+    - acqsc
+    - at
+    - ceq
+    - che
+    - cogs
+    - csho
+    - dlc
+    - dp
+    - dpc
+    - dt
+    - dvpd
+    - exchg
+    - gdwl
+    - ib
+    - ibc
+    - intan
+    - invt
+    - lct
+    - lt
+    - ni
+    - capx
+    - oancf
+    - ivncf
+    - fincf
+    - oiadp
+    - pi
+    - ppent
+    - ppegt
+    - rectr
+    - sale
+    - seq
+    - txt
+    - xint
+    - xsga
+    - costat
+    - mkvalt
+    - prcc_f
+    - recch
+    - invch
+    - apalch
+    - txach
+    - aoloch
+    - gdwlip
+    - spi
+    - wdp
+    - rcp
+
+stat_vars:
+    - gvkey
+    - loc
+    - sic
+    - spcindcd
+    - ipodate
+    - fic
+
+cs_filter: consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='STD' and popsrc='D'
+
+
+
+:::
+
+:::
+
+.GITIGNORE
+
+/.quarto/
+
+:::
+
+:::
+
+BEAMER_THEME_TRR266.STY
+
+
+%% BEAMER THEME TRR266
+\mode<presentation>
+
+\RequirePackage{tikz}
+	\usetikzlibrary{calc}						%teaches tikz to calculate coordinates
+	%\usetikzlibrary{matrix}						%nice matrices
+	\usetikzlibrary{positioning}				%relative positioning of nodes
+\RequirePackage{etoolbox}
+\RequirePackage{cmbright}
+\RequirePackage{kvoptions}
+%\RequirePackage{xparse}
+
+\usepackage{ifxetex}
+\ifxetex
+  \usepackage{fontspec}
+  \defaultfontfeatures{Ligatures=TeX} % To support LaTeX quoting style
+  \usepackage[sfdefault,lf]{carlito}
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\fi
+
+
+% Options-------------------------------------------------------------------------------------------
+
+
+% Logos---------------------------------------------------------------------------------------------
+
+\newdimen\logosizesmall
+\logosizesmall=6mm
+
+
+%\pgfdeclareimage[height=\logosizesmall]{upb}{UPBLog}
+
+
+% Settings = including color, inner, and outer theme
+
+%% COLOR THEME
+\mode<presentation>
+
+
+% Definitions
+% Primary colors
+\definecolor{petroltrr}{RGB}{20,103,107}
+\definecolor{yellowtrr}{RGB}{236,144,7}
+\definecolor{bluetrr}{RGB}{42,175,210}
+\definecolor{redtrr}{RGB}{111,53,75}
+
+% Secondary colors
+\definecolor{lilactrr}{RGB}{34,53,93}
+\definecolor{darkpetroltrr}{RGB}{29,117,141}
+\definecolor{darkgreentrr}{RGB}{34,75,79}
+\definecolor{lightpetroltrr}{RGB}{27,138,143}
+\definecolor{lightyellowtrr}{RGB}{255,180,59}
+\definecolor{lightbluetrr}{RGB}{110,202,226}
+\definecolor{lightredtrr}{RGB}{148,70,100}
+
+% Settings
+
+% Settings
+% Title
+%\ifTRR@light%
+%	\setbeamercolor*{title}{bg=white, fg=petroltrr}
+%	\setbeamercolor*{title page header}{bg=white, fg=petroltrr}
+%	\setbeamercolor*{author}{fg=petroltrr!75}
+%	\setbeamercolor*{institute}{fg=petroltrr!75}
+%	\setbeamercolor*{date}{fg=petroltrr}
+%\else%
+\setbeamercolor*{title}{fg=white, bg=petroltrr}
+\setbeamercolor*{title page header}{fg=white, bg=petroltrr}
+\setbeamercolor*{author}{fg=lightpetroltrr!25}
+\setbeamercolor*{institute}{fg=lightpetroltrr!25}
+\setbeamercolor*{date}{fg=lightpetroltrr!40}
+%\fi%
+
+
+\setbeamercolor*{item}{fg=lightpetroltrr}
+\setbeamercolor*{normal text}{fg=black}
+\setbeamercolor*{itemize item}{fg=petroltrr}
+\setbeamercolor*{itemize subitem}{parent=itemize item}
+\setbeamercolor*{itemize subsubitem}{parent=itemize item}
+\setbeamercolor*{enumerate subitem}{parent=itemize item}
+\setbeamercolor*{enumerate item}{parent=itemize item}
+\setbeamercolor*{description item}{parent=itemize item}
+\setbeamercolor*{section number projected}{fg=petroltrr}
+\setbeamercolor*{section in toc}{fg=petroltrr}
+\setbeamercolor*{section title}{fg=petroltrr}
+\setbeamercolor*{section in head/foot}{fg=petroltrr}
+\setbeamercolor*{frametitle}{fg=petroltrr}
+\setbeamercolor*{page number in head/foot}{fg=petroltrr}
+\setbeamercolor*{section in toc}{fg=petroltrr}
+\setbeamercolor*{block title}{fg=petroltrr}
+\setbeamercolor*{block body}{fg=lightpetrol!30}
+
+\hypersetup{colorlinks=true,urlcolor=lightbluetrr,linkcolor=petroltrr}
+
+% Framed blocks
+\setbeamercolor*{block title}{fg=petroltrr, bg=white}
+\setbeamercolor*{block body}{fg=black, bg=white}
+
+% Filled blocks
+%\setbeamercolor*{block title}{fg=petroltrr, bg=lightpetroltrr!50}
+%\setbeamercolor*{block body}{fg=black, bg=block title.bg}
+
+\mode
+<all>
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=true]  
+
+\setbeamertemplate{footline}[page number]{}
+
+%gets rid of navigation symbols
+\setbeamertemplate{navigation symbols}{}
+\mode<all>
+
+
+%% INNER THEME
+\mode<presentation>
+
+\setbeamertemplate{background}{
+  \begin{tikzpicture}
+  \useasboundingbox (0,0) rectangle(\the\paperwidth,\the\paperheight);
+  \fill[color=petroltrr] (0,1.9) rectangle (\the\paperwidth,\the\paperheight);
+  \fill[color=lightpetroltrr] (0,0) rectangle(2,1.8);
+  \fill[color=darkgreentrr!90] (2.1,0) rectangle(\the\paperwidth,1.8);
+  \ifnum\thepage>1\relax%
+   \fill[white,opacity=1] (0,0) rectangle(\the\paperwidth,\the\paperheight);
+   \fi
+  \end{tikzpicture}
+}
+
+
+
+
+% Title page
+\defbeamertemplate*{title page}{trr266}[1][]
+{ 
+		\begin{tikzpicture}
+%			\fill[color=petroltrr] ($(0,\the\paperheight)+(0,-1.825cm)$) rectangle (\the\paperwidth,\the\paperheight);
+%		\fill[color=lightpetroltrr!25] (-0.5*\the\paperwidth,.6cm) rectangle (\the\paperwidth,1.6cm);
+%			\fill[color=lightpetroltrr!55] (0,0) rectangle (\the\paperwidth,.6cm);
+%			\node[outer sep=0cm, inner sep=0cm, anchor=south, font=\tiny, petroltrr] at (-0.5*\the\paperwidth,0.2)
+%				{Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) –-
+%				Project-ID 403041268 – TRR 266};
+			\node[outer sep=0cm, inner sep=0cm, anchor=north] at (-0.5*\the\paperwidth,\the\paperheight) 
+				{\includegraphics[keepaspectratio, height=1.5cm]{trr266_logo.eps}};
+		\end{tikzpicture}
+  \vskip1.5cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=1cm,#1]{title page header}
+      \usebeamerfont{title}\inserttitle\par%
+    \end{beamercolorbox}%
+    \vskip.35cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=1cm,sep=1pt,#1]{author}
+      \usebeamerfont{author}\insertauthor%
+    \end{beamercolorbox}
+     \vskip3.5cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=2cm,#1]{institute}
+      \usebeamerfont{author}\insertinstitute%
+    \end{beamercolorbox}
+     \vskip.1cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=2cm,#1]{date}
+      \usebeamerfont{author}\insertdate%
+    \end{beamercolorbox}
+  \vfil
+
+}
+
+% Items
+\setbeamertemplate{items}[square]
+\setbeamertemplate{sections/subsections in toc}[square]
+
+\mode
+<all>
+
+%% OUTER THEME
+\mode<presentation>
+
+% Frame title
+\defbeamertemplate*{frametitle}{trr266}[1][]
+{
+\vskip1cm%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.5cm]{frametitle} 
+  \begin{tikzpicture}
+  \useasboundingbox[fill=white](0,0) rectangle(\the\paperwidth,0.5);
+  \fill[lightpetroltrr!50] (0,0) rectangle(2,1.2);
+  \fill[petroltrr] (2.1,0) rectangle(\the\paperwidth,1.2);
+   \ifx\insertframesubtitle\@empty%
+      {\node[anchor=west, white,font=\large] at (2.2,0.7){\insertframetitle};}
+      \else%
+      {\node[anchor= west, white,font=\large] at (2.2,0.7){\insertframetitle};%
+       \node[anchor= west, white,font=\small] at (2.21,0.30){\insertframesubtitle};}%
+      \fi
+  \end{tikzpicture}
+  \end{beamercolorbox}
+}
+
+\mode<all>
+
+
+:::
+
+:::
+
+BEAMER_THEME_TRR266_16X9.STY
+
+
+%% BEAMER THEME TRR266
+\mode<presentation>
+
+\RequirePackage{tikz}
+	\usetikzlibrary{calc}						%teaches tikz to calculate coordinates
+	%\usetikzlibrary{matrix}						%nice matrices
+	\usetikzlibrary{positioning}				%relative positioning of nodes
+\RequirePackage{etoolbox}
+\RequirePackage{cmbright}
+\RequirePackage{kvoptions}
+\RequirePackage[absolute,overlay]{textpos}
+\usepackage{ifxetex}
+\ifxetex
+  \usepackage{fontspec}
+  \defaultfontfeatures{Ligatures=TeX} % To support LaTeX quoting style
+  \usepackage[sfdefault,lf]{carlito}
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\fi
+
+
+% Options-------------------------------------------------------------------------------------------
+
+
+% Logos---------------------------------------------------------------------------------------------
+
+\newdimen\logosizesmall
+\logosizesmall=6mm
+
+
+%\pgfdeclareimage[height=\logosizesmall]{upb}{UPBLog}
+
+
+% Settings = including color, inner, and outer theme
+
+%% COLOR THEME
+\mode<presentation>
+
+
+% Definitions
+% Primary colors
+\definecolor{petroltrr}{RGB}{20,103,107}
+\definecolor{yellowtrr}{RGB}{236,144,7}
+\definecolor{bluetrr}{RGB}{42,175,210}
+\definecolor{redtrr}{RGB}{111,53,75}
+
+% Secondary colors
+\definecolor{lilactrr}{RGB}{34,53,93}
+\definecolor{darkpetroltrr}{RGB}{29,117,141}
+\definecolor{darkgreentrr}{RGB}{34,75,79}
+\definecolor{lightpetroltrr}{RGB}{27,138,143}
+\definecolor{lightyellowtrr}{RGB}{255,180,59}
+\definecolor{lightbluetrr}{RGB}{110,202,226}
+\definecolor{lightredtrr}{RGB}{148,70,100}
+
+% Settings
+
+% Settings
+% Title
+%\ifTRR@light%
+%	\setbeamercolor*{title}{bg=white, fg=petroltrr}
+%	\setbeamercolor*{title page header}{bg=white, fg=petroltrr}
+%	\setbeamercolor*{author}{fg=petroltrr!75}
+%	\setbeamercolor*{institute}{fg=petroltrr!75}
+%	\setbeamercolor*{date}{fg=petroltrr}
+%\else%
+\setbeamercolor*{title}{fg=white, bg=petroltrr}
+\setbeamercolor*{subtitle}{fg=white, bg=petroltrr}
+\setbeamercolor*{title page header}{fg=white, bg=petroltrr}
+\setbeamercolor*{author}{fg=lightpetroltrr!25}
+\setbeamercolor*{institute}{fg=lightpetroltrr!25}
+\setbeamercolor*{date}{fg=lightpetroltrr!40}
+%\fi%
+
+
+\setbeamercolor*{item}{fg=lightpetroltrr}
+\setbeamercolor*{normal text}{fg=black}
+\setbeamercolor*{itemize item}{fg=petroltrr}
+\setbeamercolor*{itemize subitem}{parent=itemize item}
+\setbeamercolor*{itemize subsubitem}{parent=itemize item}
+\setbeamercolor*{enumerate subitem}{parent=itemize item}
+\setbeamercolor*{enumerate item}{parent=itemize item}
+\setbeamercolor*{description item}{parent=itemize item}
+\setbeamercolor*{section number projected}{fg=petroltrr}
+\setbeamercolor*{section in toc}{fg=petroltrr}
+\setbeamercolor*{section title}{fg=petroltrr}
+\setbeamercolor*{section in head/foot}{fg=petroltrr}
+\setbeamercolor*{frametitle}{fg=petroltrr}
+\setbeamercolor*{page number in head/foot}{fg=petroltrr}
+\setbeamercolor*{section in toc}{fg=petroltrr}
+\setbeamercolor*{block title}{fg=petroltrr}
+\setbeamercolor*{block body}{fg=lightpetrol!30}
+\setbeamercolor*{button}{bg=lightpetroltrr!50,fg=white}
+\hypersetup{colorlinks=true,urlcolor=lightbluetrr,linkcolor=petroltrr}
+
+% Framed blocks
+\setbeamercolor*{block title}{fg=petroltrr, bg=white}
+\setbeamercolor*{block body}{fg=black, bg=white}
+
+% Filled blocks
+%\setbeamercolor*{block title}{fg=petroltrr, bg=lightpetroltrr!50}
+%\setbeamercolor*{block body}{fg=black, bg=block title.bg}
+
+\mode
+<all>
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=true]
+
+\setbeamertemplate{footline}[page number]{}
+
+%gets rid of navigation symbols
+\setbeamertemplate{navigation symbols}{}
+\mode<all>
+
+
+%% INNER THEME
+\mode<presentation>
+
+\setbeamertemplate{background}{
+  \begin{tikzpicture}
+  \useasboundingbox (0,0) rectangle(\the\paperwidth,\the\paperheight);
+  \fill[color=petroltrr] (0,2) rectangle (\the\paperwidth,\the\paperheight);
+  \fill[color=lightpetroltrr] (0,0) rectangle(1.9, 1.9);
+  \fill[color=darkgreentrr!90] (2,0) rectangle(\the\paperwidth, 1.9);
+  \ifnum\thepage>1\relax%
+   \fill[white,opacity=1] (0,0) rectangle(\the\paperwidth,\the\paperheight);
+   \fi
+  \end{tikzpicture}
+}
+
+% Button place command
+
+\newcommand{\placebutton}[3]{%
+	\begin{tikzpicture}[remember picture, overlay]
+		\node[anchor=south west, shift={(0.25cm,0.25cm)}]() at (current page.south west){%
+          \hyperlink{#2}{%
+              \ifstrequal{#1}{return}{\beamerreturnbutton{#3}}{}%
+              \ifstrequal{#1}{skip}{\beamerskipbutton{#3}}{}%
+          }
+		};
+	\end{tikzpicture}
+}
+
+% Title page
+\defbeamertemplate*{title page}{trr266}[1][]
+{
+	\begin{textblock*}{\textwidth}(0.1\textwidth,0.1\textheight)
+		\includegraphics[keepaspectratio, height=1.5cm]{trr266_logo.eps}
+	\end{textblock*}
+	\begin{textblock*}{\textwidth}(0.1\textwidth,0.4\textheight)
+		\begin{beamercolorbox}[#1]{title page header}
+		 	\usebeamerfont{title}\inserttitle\par%
+  	\end{beamercolorbox}
+	\end{textblock*}
+	\begin{textblock*}{\textwidth}(0.1\textwidth,0.6\textheight)
+  	\begin{beamercolorbox}[sep=1pt,#1]{author}
+  		\usebeamerfont{author}\insertauthor\par%
+			\usebeamerfont{author}\insertinstitute%
+  	\end{beamercolorbox}
+	\end{textblock*}
+	\begin{textblock*}{\textwidth}(0.2\textwidth,0.9\textheight)
+		\begin{beamercolorbox}[sep=1pt,#1]{date}
+  		\usebeamerfont{subtitle}\insertsubtitle\par%
+  		\usebeamerfont{author}\insertdate%
+  	\end{beamercolorbox}
+	\end{textblock*}
+  \vfil
+}
+
+% Items
+\setbeamertemplate{items}[square]
+\setbeamertemplate{sections/subsections in toc}[square]
+
+\mode
+<all>
+
+%% OUTER THEME
+\mode<presentation>
+
+% Frame title
+\defbeamertemplate*{frametitle}{trr266}[1][]
+{
+\vskip1cm%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.5cm]{frametitle}
+  \begin{tikzpicture}
+  \useasboundingbox[fill=white](0,0) rectangle(\the\paperwidth,0.5);
+  \fill[lightpetroltrr!50] (0,0) rectangle(2,1.2);
+  \fill[petroltrr] (2.1,0) rectangle(\the\paperwidth,1.2);
+   \ifx\insertframesubtitle\@empty%
+      {\node[anchor=west, white,font=\large] at (2.2,0.7){\insertframetitle};}
+      \else%
+      {\node[anchor= west, white,font=\large] at (2.2,0.7){\insertframetitle};%
+       \node[anchor= west, white,font=\small] at (2.21,0.30){\insertframesubtitle};}%
+      \fi
+  \end{tikzpicture}
+  \end{beamercolorbox}
+}
+
+\mode<all>
+
+
+:::
+
+:::
+
+PAPER_PYTHON.QMD
+
+---
+title: |
+  | Exporing Discretionary Accruals: 
+  | A Stub Project^[I acknowledge financial support from Deutsche Forschungsgemeinschaft-Project-ID 403041268 - TRR 266.] \vspace{1cm}
+author: |
+  | Joachim Gassen 
+  | TRR 266 Accounting for Transparency
+  | Humboldt-Universität zu Berlin 
+  | gassen@wiwi.hu-berlin.de
+date: today
+date-format: MMM D, YYYY [\vspace{1cm}]
+abstract: |
+  | The Open Science movement promotes the accessibility and reusability of research. This repository has the objective to help researchers establishing such an collaboration-oriented workflow. It uses a toy project on discretionary accruals for demonstration. 
+  | \vspace{6cm}
+bibliography: references.bib
+biblio-style: apsr
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+    toc: false
+fig_caption: yes
+fontsize: 11pt
+ident: yes
+always_allow_html: yes
+header-includes:
+  - \usepackage[nolists]{endfloat}    
+  - \usepackage{setspace}\doublespacing
+  - \setlength{\parindent}{4em}
+  - \setlength{\parskip}{0em}
+  - \usepackage[hang,flushmargin]{footmisc}
+  - \usepackage{caption} 
+  - \captionsetup[table]{skip=24pt,font=bf}
+  - \usepackage{array}
+  - \usepackage{threeparttable}
+  - \usepackage{adjustbox}
+  - \usepackage{graphicx}
+  - \usepackage{csquotes}
+  - \usepackage[margin=1in]{geometry}
+---
+
+```{python}
+#| echo: false
+#| output: false
+
+import pickle
+import yaml
+
+# Not sure why one needs this, but without it, the plots do not show in the PDF
+import matplotlib.pyplot as plt
+plt.show()
+
+global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
+
+with open('../' + global_cfg['results_python'], 'rb') as f:
+        results = pickle.load(f)
+
+min_fyear, max_fyear, no_unique_firms = results['Desc information'].values()
+
+
+def rename_var_to_label(table, italic=True):
+    for var_name, var_label in results['Variable Names'].items():
+        var_label = f'\\textit{{{var_label}}}' if italic else var_label
+        table = table.replace(var_name, var_label)
+    return table
+
+data_note = (
+    f"The data are obtained from Compustat U.S. as provided by WRDS. "
+    f"The sample covers the period {int(min_fyear)} to {int(max_fyear)} and "
+    f"{no_unique_firms:,} unique firms. "
+    f"Variable definitions are provided by code at "
+    f"\\url{{https://github.com/trr266/treat}}."
+)
+```
+
+\pagebreak
+
+
+
+# Introduction
+  
+This is not a paper but a stub that is part of a [project template repository](https://github.com/trr266/treat). We developed this repository to provide a prototype for a reproducible and collaborative workflow. Several authors have discussed advantages of such workflows [@W_2017; @GGR_2018; @CFM_2019] and many scholars across fields have voiced the need for increased reproducibility in science [e.g., @I_2005; @GL_2014; @DPR_2017].
+
+
+# Discretionary Accruals
+
+To demonstrate our workflow, we explore discretionary accruals across the U.S. We calculate modified Jones and Dechow and Dichev type accruals and show their distributional properties. The main purpose of all this, however, is to provide a toy use case for [our project template directory](https://github.com/trr266/project_template) that contains all the code to obtain the data, run the analysis and prepare a paper as well as a presentation.
+
+Table \ref{tab:tab-descriptives-sample} presents our data that is based on a simple WRDS pull of Compustat data with financial firms (SIC 6XXX) excluded. We require data to calculate all variables and this drastically reduces the sample size. Modified Jones discretionary accruals are calculated loosely based on @HN_2007 and Dechow and Dichev discretionary accruals are calculated based on (big surprise) @DD_2002. As you will see from @fig-boxplot_smp, discretionary accruals are very noisy constructs, even after limiting the sample to observations with complete data and winsorizing all data to the top and bottom percentile for each year. @fig-scatter_dd_lnta shows a very prominent heteroscedasticity of discretionary accruals with regards to size. While researchers have tried to address this problem, the distributional properties of these constructs significantly complicate the interpretation of discretionary accrual-related findings. Especially in high powered settings, the measurement error, being highly correlated with size, will tend to load on variables that are unrelated to the underlying economic construct but correlated with size. Table \ref{tab:corr} shows some correlations and Table \ref{tab:reg} shows some completely pointless regressions.
+
+```{python}
+#| label: fig-boxplot_smp
+#| fig-cap: "Distribution of Discretionary Accruals over Time"
+#| echo: false
+#| fig-format: svg
+
+results['fig_boxplot_smp']
+```
+
+```{python}
+#| label: fig-scatter_dd_lnta
+#| fig-cap: "Dechow and Dichev DA and Firm Size"
+#| echo: false
+#| fig-format: svg
+
+results['fig_scatter_dd_lnta']
+```
+
+```{python}
+#| echo: false
+#| output: asis
+
+lat_tab = rename_var_to_label(results['Descriptive Statistics']).split('\n')
+lat_tab[4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+lat_tab[6] = '\\hline\\\\[-1.8ex]'
+lat_tab[-4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+
+print('\n'.join([
+    '\\begin{table}[!htbp]',  
+    '\\caption{\\label{tab:descriptives}Descriptive Statistics}',
+    '\\label{tab:tab-descriptives-sample}',
+    '\\begin{adjustbox}{width=\\textwidth}',
+    '\\begin{threeparttable}',
+    '\n'.join(lat_tab[3:-2]),
+    '\\begin{tablenotes}[flushleft]',
+    '\\setlength{\\labelsep}{0pt}',
+    '\\item \\emph{Note}: This table provides the sample demographics.',
+    data_note,
+    '\\end{tablenotes}',
+    '\\end{threeparttable}',
+    '\\end{adjustbox}',
+    '\\end{table}',
+]))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+
+lat_tab = rename_var_to_label(results['Correlations'], False).split('\n')
+
+lat_tab[2] = '\\\\[-0.9ex]\\hline \\hline \\\\[-0.9ex]'
+lat_tab[4] = '\\hline\\\\[-1.8ex]'
+lat_tab[12] = '\\\\[-0.9ex]\\hline \\hline \\\\[-0.9ex]'
+
+print('\n'.join([
+    "\\begin{table}[!htbp]",
+    "\\centering",
+    "\\caption{\\label{tab:CorrTable}Correlations}",
+    '\\label{tab:corr}',
+    '\n'.join(lat_tab[0:14]),
+    '\\begin{tablenotes}[flushleft]',
+    '\\setlength{\\labelsep}{0pt}',
+    '\\item \\emph{Note}: This table provides sample correlations.',
+    'Pearson correlations are above and',
+    'spearman correlations are below the diagonal.',
+    data_note,
+    '\\end{tablenotes}',
+    '\\end{threeparttable}',
+    "\\end{table}"
+]))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+
+reg_lines = results['Regression'].split('\n')[3:-1]
+obs_idx = next(i for i, line in enumerate(reg_lines) if 'Observations' in line)
+reg_lines.insert(obs_idx, '\\midrule')
+
+print('\n'.join([
+    '\\begin{table}[!htbp] \\centering',
+    '\\caption{\\label{tab:reg}Regressions}', 
+    '\\label{tab:reg}',
+    '\\begin{threeparttable}',
+    rename_var_to_label('\n'.join(reg_lines)),
+    '\\begin{tablenotes}[flushleft]',
+    '\\setlength{\\labelsep}{0pt}',
+    '\\item \\emph{Note}: This table provides the findings from two OLS regressions.',
+    'The dependent variables are as provided in the respective column heads.',
+    data_note,
+    '\\end{tablenotes}',
+    '\\end{threeparttable}',
+    "\\end{table}"
+]))
+```
+
+# Conclusion
+
+Isn't that wonderful? Discretionary accruals rock but what rocks even more is open science and a collaborative workflow. Clone or fork this repository to kickstart your own projects. If you do not like neither Python nor R, consider contributing code in your favorite statistical programming language to the repo. Thanks for reading and enjoy!
+
+\pagebreak
+
+\setcounter{table}{0}
+\renewcommand{\thetable}{\arabic{table}}
+
+# References {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent
+:::
+
+:::
+
+PAPER_R.QMD
+
+---
+title: |
+  | Exporing Discretionary Accruals: 
+  | A Stub Project^[We acknowledge financial support from Deutsche Forschungsgemeinschaft-Project-ID 403041268 - TRR 266.] \vspace{1cm}
+author: 
+  - name: Joachim Gassen
+    email: gassen@wiwi.hu-berlin.de
+    affiliation: Humboldt-Universität zu Berlin
+date: last-modified
+date-format: long
+execute:
+  echo: false
+  message: false
+  warning: false
+abstract: | 
+  | \vfill The Open Science movement promotes the accessibility and reusability of research. This repository has the objective to help researchers establishing such an collaboration-oriented workflow. It uses a toy project on discretionary accruals for demonstration. 
+  | \vspace{6cm}
+bibliography: references.bib
+biblio-style: apsr
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+    toc: false
+    fig-cap-location: top
+fontsize: 11pt
+ident: yes
+header-includes:
+  - \usepackage[nolists]{endfloat}    
+  - \usepackage{setspace}\doublespacing
+  - \setlength{\parindent}{4em}
+  - \setlength{\parskip}{0em}
+  - \usepackage[hang,flushmargin]{footmisc}
+  - \usepackage{caption} 
+  - \captionsetup[table]{skip=12pt,font=bf}
+  - \captionsetup[figure]{skip=12pt,font=bf}
+  - \usepackage{array}
+  - \usepackage{threeparttable}
+  - \usepackage{adjustbox}
+  - \usepackage{graphicx}
+  - \usepackage{csquotes}
+  - \usepackage[margin=1in]{geometry}
+  - \usepackage{booktabs}
+---
+
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(glue)
+library(gt)
+
+
+load("../output/results.rda")
+
+convert_to_latex <- function(gt_table) {
+	gt_table %>% 
+		as_latex() %>% 
+		strsplit(split = "\n", fixed= TRUE) %>%
+		unlist() %>%
+		str_replace(fixed("{tabular*}"), "{tabular}") %>%
+		str_replace(fixed("{\\linewidth}{@{\\extracolsep{\\fill}}"), "{")
+}
+
+data_note <- glue(
+	"The data are obtained from Compustat U.S. as provided ",
+  "by WRDS. The sample covers the period {min(smp_da$fyear)} ",
+  "to {max(smp_da$fyear)} and ",
+  "{format(length(unique(smp_da$gvkey)), big.mark = ',')} unique firms. ",
+  "Variable definitions are provided by code at ", 
+  "\\url{{https://github.com/trr266/treat}}."
+)
+```
+
+\pagebreak
+
+# Introduction
+  
+This is not a paper but a stub that is part of a [project template repository](https://github.com/trr266/treat). We developed this repository to provide a prototype for a reproducible and collaborative workflow. Several authors have discussed advantages of such workflows [@W_2017; @GGR_2018; @CFM_2019] and many scholars across fields have voiced the need for increased reproducibility in science [e.g., @I_2005; @GL_2014; @DPR_2017].
+
+
+# Discretionary Accruals
+
+To demonstrate our workflow, we explore discretionary accruals across the U.S. We calculate modified Jones and Dechow and Dichev type accruals and show their distributional properties. The main purpose of all this, however, is to provide a toy use case for [our project template directory](https://github.com/trr266/project_template) that contains all the code to obtain the data, run the analysis and prepare a paper as well as a presentation.
+
+@tbl-desc presents our data that is based on a simple WRDS pull of Compustat data with financial firms (SIC 6XXX) excluded. We require data to calculate all variables and this drastically reduces the sample size. Modified Jones discretionary accruals are calculated loosely based on @HN_2007 and Dechow and Dichev discretionary accruals are calculated based on (big surprise) @DD_2002. As you will see from @fig-boxplot-smp, discretionary accruals are very noisy constructs, even after limiting the sample to observations with complete data and winsorizing all data to the top and bottom percentile for each year. @fig-scatter-dd-lnta shows a very prominent heteroscedasticity of discretionary accruals with regards to size. While researchers have tried to address this problem, the distributional properties of these constructs significantly complicate the interpretation of discretionary accrual-related findings. Especially in high powered settings, the measurement error, being highly correlated with size, will tend to load on variables that are unrelated to the underlying economic construct but correlated with size. @tbl-corr shows some correlations and @tbl-reg shows some completely pointless regressions.
+
+
+```{r BoxPlot, echo = FALSE, fig.align="center"}
+#| label: fig-boxplot-smp
+#| fig-cap: Distribution of Discretionary Accruals over Time
+#| fig-pos: ht
+
+fig_boxplot_smp
+```
+
+
+```{r Scatter, echo = FALSE, fig.align="center"}
+#| label: fig-scatter-dd-lnta
+#| fig-cap: Dechow and Dichev DA and Firm Size
+#| fig-pos: ht
+
+fig_scatter_dd_lnta
+```
+
+
+```{r tab_descriptives_sample, results="asis"}
+#| label: tbl-desc
+#| tbl-cap: "Descriptives"
+#| tbl-pos: ht
+
+latex_tab <- c(
+  "\\begin{adjustbox}{width=\\textwidth}",
+  "\\begin{threeparttable}",
+  head(convert_to_latex(tab_desc_stat)[-(1:2)], -1),
+  "\\begin{tablenotes}[flushleft]",
+  "\\setlength{\\labelsep}{0pt}",
+  "\\item \\emph{Note}: This table provides the sample demographics.",
+  data_note,
+  "\\end{tablenotes}",
+  "\\end{threeparttable}",
+  "\\end{adjustbox}"
+)
+cat(paste(latex_tab, collapse = "\n"))  
+```
+
+``` {r CorrTable, results="asis"}
+#| label: tbl-corr
+#| tbl-cap: "Correlations"
+#| tbl-pos: ht
+
+latex_tab <- c(
+  "\\begin{threeparttable}",
+  head(convert_to_latex(tab_corr)[-(1:2)], -1),
+  "\\begin{tablenotes}[flushleft]",
+  "\\setlength{\\labelsep}{0pt}",
+  "\\item \\emph{Note}: This table provides sample correlations.",
+  "Pearson correlations are above and", 
+  "spearman correlations are below the diagonal.",
+  data_note,
+  "\\end{tablenotes}",
+  "\\end{threeparttable}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+``` {r RegTable, results="asis"}
+#| label: tbl-reg
+#| tbl-cap: "Regressions"
+#| tbl-pos: ht
+
+tab_reg <- head(convert_to_latex(tab_regression)[-(1:2)], -1)
+
+#  Add a midline above the Observations row
+obs_row <- which(str_detect(tab_reg, fixed("Observations")))
+tab_reg <- c(
+	tab_reg[1:(obs_row-1)], "\\midrule", tab_reg[obs_row:length(tab_reg)]
+)
+
+latex_tab <- c(
+  "\\begin{threeparttable}",
+  tab_reg,
+  "\\begin{tablenotes}[flushleft]",
+  "\\setlength{\\labelsep}{0pt}",
+  "\\item \\emph{Note}: This table provides the findings from two OLS regressions.",
+  "The dependent variables are as provided in the respective column heads.",
+  data_note,
+  "\\end{tablenotes}",
+  "\\end{threeparttable}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+# Conclusion
+
+Isn't that wonderful? Discretionary accruals rock but what rocks even more is open science and a collaborative workflow. Clone or fork this repository to kickstart your own projects. If you do not like neither Python nor R, consider contributing code in your favorite statistical programming language to the repo. Thanks for reading and enjoy!
+
+\pagebreak
+
+
+
+# References {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent
+:::
+
+:::more_incoming:::
+
+:::
+
+PRESENTATION_PYTHON.QMD
+
+---
+title: "Exploring Discretionary Accruals"
+author: "Joachim Gassen"
+institute: "TRR 266 Accounting for Transparency"
+date: last-modified
+date-format: long
+fontsize: "9pt"
+pdf-engine: xelatex # pdflatex creates rastered fonts
+format: 
+  beamer:
+    slide-level: 3
+    number-sections: false
+    toc: false
+classoption: "aspectratio=169"
+execute:
+  echo: false
+  message: false
+  warning: false
+header-includes:
+- \usepackage{booktabs} 
+- \usepackage{threeparttable}
+- \usepackage{graphicx}
+- \input{beamer_theme_trr266_16x9.sty}
+---
+
+
+```{python}
+#| output: false
+
+import pickle
+import yaml
+# Not sure why one needs this, but without it, the plots do not show in the PDF
+import matplotlib.pyplot as plt
+plt.show()
+
+global_cfg = yaml.safe_load(open('../config/global_cfg.yaml', 'r'))
+
+with open('../' + global_cfg['results_python'], 'rb') as f:
+        results = pickle.load(f)
+
+min_fyear, max_fyear, no_unique_firms = results['Desc information'].values()
+
+
+def rename_var_to_label(table, italic=True):
+    for var_name, var_label in results['Variable Names'].items():
+        var_label = f'\\textit{{{var_label}}}' if italic else var_label
+        table = table.replace(var_name, var_label)
+    return table
+```
+
+
+# Motivation
+
+### Discretionary Accruals
+
+- Are used in tons of papers
+- As measurement constructs for almost everything
+  - Earnings Management
+  - Earnings Quality
+  - Audit Quality
+  - Management Quality
+- But how do they look like?
+
+
+### Data
+
+```{python}
+#| output: asis
+
+lat_tab = rename_var_to_label(results['Descriptive Statistics']).split('\n')
+# lat_tab[4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+# lat_tab[6] = '\\hline\\\\[-1.8ex]'
+# lat_tab[-4] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+
+print('\n'.join([
+    '\\begin{table}[!htbp]',  
+    '\\resizebox{\\textheight}{!}{',
+    '\\begin{threeparttable}',
+    '\n'.join(lat_tab[3:-2]),
+    '\\begin{tablenotes}[flushleft]',
+    '\setlength{\labelsep}{0pt}',
+    f'\\item Note: The data is obtained from the Compustat U.S. as provided by WRDS. The sample covers the period {int(min_fyear)} to {int(max_fyear)} and {no_unique_firms:,} unique firms.',
+    '\end{tablenotes}',
+    '\end{threeparttable}',
+    '}',
+    '\\end{table}',
+]))
+```
+
+### Distribution of Discretionary Accruals over time - unrestricted sample
+
+```{python}
+#| label: fig-boxplot_full
+#| fig-cap: "Distribution of Discretionary Accruals over time - unrestricted sample"
+
+results['fig_boxplot_full'].set_figheight(2.6)
+results['fig_boxplot_full']
+```
+
+### Distribution of Discretionary Accruals over time - analysis sample
+
+
+```{python}
+#| label: fig-boxplot_smp
+#| fig-cap: "Distribution of Discretionary Accruals over Time - analysis sample"
+
+results['fig_boxplot_smp'].set_figheight(2.6)
+results['fig_boxplot_smp']
+```
+
+
+### Correlation of Modified Jones with Dechow and Dichev DA
+
+```{python}
+#| label: fig-scatter_md_dd
+#| fig-cap: "Correlation of Modified Jones with Dechow and Dichev DA"
+
+results['fig_scatter_md_dd'].set_figheight(3)
+results['fig_scatter_md_dd']
+```
+
+
+### Association of Dechow and Dichev DA with firm size
+
+```{python}
+#| label: fig-scatter_dd_lnta
+#| fig-cap: "Dechow and Dichev DA and Firm Size"
+
+results['fig_scatter_dd_lnta'].set_figheight(3)
+results['fig_scatter_dd_lnta']
+```
+
+### No presentation without correlation table...
+
+
+```{python}
+#| output: asis
+
+lat_tab = rename_var_to_label(results['Correlations'], False).split('\n')
+lat_tab[2] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+lat_tab[4] = '\\hline\\\\[-1.8ex]'
+lat_tab[-7] = '\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]'
+
+print('\n'.join([
+    '\\begin{center}',
+    '\\resizebox*{\\textwidth}{!}{',
+    '\\begin{tabular}{lccccccc}',
+    '\n'.join(lat_tab[2:-6]),
+    '\\end{tabular}}',
+    '\\end{center}'
+]))
+```
+
+### ... and regression table
+
+```{python}
+#| output: asis
+
+print('\n'.join([
+    '\\begin{center}',
+    '\\resizebox*{!}{0.8\\textheight}{', 
+    '\\begin{tabular}{lcc}',
+    rename_var_to_label('\n'.join(results['Regression'].split('\n')[4:-2])),
+    '\\end{tabular}}',
+    '\\end{center}'
+]))
+```
+
+### Conclusion
+
+- Discretionary accruals are simply wonderful! 
+- With these distributional properties and the power of large samples they will almost always be significant in one direction or the other regardless the setting or controls
+- Use them for every economic construct under the sun!
+
+
+
+
+
+
+
+
+:::
+
+:::
+
+PRESENTATION_R.QMD
+
+---
+title: "Exploring Discretionary Accruals"
+author: "Joachim Gassen"
+institute: "TRR 266 Accounting for Transparency"
+date: last-modified
+date-format: long
+fontsize: "9pt"
+pdf-engine: xelatex # pdflatex creates rastered fonts
+format: 
+  beamer:
+    slide-level: 3
+    number-sections: false
+    toc: false
+classoption: "aspectratio=169"
+execute:
+  echo: false
+  message: false
+  warning: false
+header-includes:
+- \usepackage{booktabs} 
+- \usepackage{threeparttable}
+- \usepackage{graphicx}
+- \input{beamer_theme_trr266_16x9.sty}
+---
+
+
+```{r setup}
+library(tidyverse)
+library(glue)
+library(gt)
+
+load("../output/results.rda")
+
+convert_to_latex <- function(gt_table) {
+	gt_table %>% 
+		as_latex() %>% 
+		strsplit(split = "\n", fixed= TRUE) %>%
+		unlist() %>%
+		str_replace(fixed("{tabular*}"), "{tabular}") %>%
+		str_replace(fixed("{\\linewidth}{@{\\extracolsep{\\fill}}"), "{")
+}
+```
+
+
+# Motivation
+
+### Discretionary Accruals
+
+- Are used in tons of papers
+- As measurement constructs for almost everything
+  - Earnings Management
+  - Earnings Quality
+  - Audit Quality
+  - Management Quality
+- But how do they look like?
+
+
+### Data
+
+```{r tab_descriptives_sample, results="asis"}
+latex_tab <- c(
+	"\\centering{",
+  head(convert_to_latex(tab_desc_stat)[-(1:2)], -1),
+	"}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### Distribution of Discretionary Accruals over time - unrestricted sample
+
+```{r BPlotFULL, fig.height=5}
+fig_boxplot_full
+```
+
+
+### Distribution of Discretionary Accruals over time - analysis sample
+
+```{r BPlotSMP, fig.height=5}
+fig_boxplot_smp
+```
+
+
+### Correlation of Modified Jones with Dechow and Dichev DA
+
+```{r CorrVizz, fig.height=5}
+fig_scatter_md_dd
+```
+
+
+### Association of Dechow and Dichev DA with firm size
+
+```{r AssDDSize, fig.height=5}
+fig_scatter_dd_lnta
+```
+
+
+### No presentation without correlation table...
+
+``` {r CorrTable, results="asis"}
+latex_tab <- c(
+	"\\centering{",
+  head(convert_to_latex(tab_corr)[-(1:2)], -1),
+	"}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### ... and regression table
+
+``` {r RegTable, results="asis"}
+tab_reg <- head(convert_to_latex(tab_regression)[-(1:2)], -1)
+
+#  Add a midline above the Observations row
+obs_row <- which(str_detect(tab_reg, fixed("Observations")))
+tab_reg <- c(
+	tab_reg[1:(obs_row-1)], "\\midrule", tab_reg[obs_row:length(tab_reg)]
+)
+
+latex_tab <- c(
+	"\\centering{",
+  tab_reg,
+	"}"
+)
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+### Conclusion
+
+- Discretionary accruals are simply wonderful! 
+- With these distributional properties and the power of large samples they will almost always be significant in one direction or the other regardless the setting or controls
+- Use them for every economic construct under the sun!
+
+
+
+
+
+
+
+
+:::
+
+:::
+
+REFERENCES.BIB
+
+@article{DPR_2017,
+  author = {Duvendack, Maren and Palmer-Jones, Richard and Reed, W.~Robert},
+  title = {What Is Meant by Replication and Why Does It Encounter Resistance in Economics?},
+  journal = {American Economic Review},
+  volume = {107},
+  number = {5},
+  year = {2017},
+  month = {May},
+  pages = {46--51},
+  doi = {10.1257/aer.p20171031}
+}
+
+@article{GL_2014,
+  author = {Gelman, Andre and Loken, Eric},
+  title = {The Statistical Crisis in Science},
+  journal = {American Scientist},
+  year = {2014},
+  volume = {102},
+  number = {6},
+  pages = {460-465},
+  doi = {10.1511/2014.111.460}
+}
+
+@article{GGR_2018,
+  author = {Gertler, Paul and Galiani, Sebastian and Romero, Mauricio},
+  title = {How to make replication the norm},
+  journal = {Nature},
+  volume = {554},
+  year = {2018},
+  month = {February},
+  pages = {417--419},
+  doi = {10.1038/d41586-018-02108-9}
+}
+
+@article{I_2005,
+    author = {Ioannidis, John P. A.},
+    journal = {PLOS Medicine},
+    publisher = {Public Library of Science},
+    title = {Why Most Published Research Findings Are False},
+    year = {2005},
+    month = {08},
+    volume = {2},
+    pages = {696-701},
+    number = {8},
+    doi = {10.1371/journal.pmed.0020124}
+}
+
+@article{SNS_2011,
+  author = {Joseph P. Simmons and Leif D. Nelson and Uri Simonsohn},
+  title ={False-Positive Psychology: Undisclosed Flexibility in Data Collection and Analysis Allows Presenting Anything as Significant},
+  journal = {Psychological Science},
+  volume = {22},
+  number = {11},
+  pages = {1359-1366},
+  year = {2011},
+  doi = {10.1177/0956797611417632}
+}
+
+@book{CFM_2019,
+  author = {Christensen, Garret, and Freese, Jeremy and Miguel, Edward},
+  title = {Transparent and Reproducible Social Science Research: How to Do Open Science},
+  year = {2019},
+  publisher = {University of California Press}
+}
+
+@article{W_2017,
+    author = {Wilson, Greg and Bryan, Jennifer and Cranston, Karen and Kitzes, Justin and Nederbragt, Lex and Teal, Tracy K.},
+    journal = {PLOS Computational Biology},
+    title = {Good enough practices in scientific computing},
+    year = {2017},
+    month = {06},
+    volume = {13},
+    number = {6},
+    pages = {1-20},
+    doi = {10.1371/journal.pcbi.1005510}
+}
+
+@article{DD_2002,
+  author={Dechow, Patricia M. and Dichev, Ilia D.},
+  title={The quality of accruals and earnings: The role of accrual estimation errors},
+  journal={The Accounting Review},
+  year={2002},
+  volume={77},
+  number={s-1},
+  pages={35-59},
+  doi={10.2308/accr.2002.77.s-1.35}
+}
+
+@article{HN_2007,
+  author = {Hribar, Paul and Nichols, Craig  D.},
+  title = {The Use of Unsigned Earnings Quality Measures in Tests of Earnings Management},
+  journal = {Journal of Accounting Research},
+  volume = {45},
+  number = {5},
+  pages = {1017-1053},
+  year = {2007},
+  doi = {https://doi.org/10.1111/j.1475-679X.2007.00259.x}
+}
+
+
+:::
+
+:::
+
+_QUARTO.YML
+
+project:
+  output-dir: ../output
+
+:::
+
+:::
+
+LICENSE
+
+Copyright 2021 Joachim Gassen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy 
+of this software and associated documentation files (the "Software"), to deal 
+in the Software without restriction, including without limitation the rights 
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+:::
+
+:::
+
+MAKEFILE
+
+# If you are new to Makefiles: https://makefiletutorial.com
+
+# Config
+
+PYTHON := python
+
+RSCRIPT := Rscript --encoding=UTF-8
+
+CONFIG := config/global_cfg.yaml
+
+PULL_WRDS_DATA_CFG := config/pull_wrds_data_cfg.yaml
+
+
+# Refer to `config/global_cfg.yaml` for file locations
+
+# Output Targets
+
+PAPER := $(shell yq -r '.output_paper' $(CONFIG))
+
+PRESENTATION :=  $(shell yq -r '.output_presentation' $(CONFIG))
+
+TARGETS :=  $(PAPER) $(PRESENTATION)
+
+
+# Input Targets
+
+SECRETS := $(shell yq -r '.secrets_file' $(CONFIG))
+
+EXTERNAL_DATA := $(shell yq -r '.fama_french_12' $(CONFIG)) \
+	$(shell yq -r '.fama_french_48' $(CONFIG))
+
+WRDS_DATA := $(shell yq -r '.cstat_us_parquet_file' $(CONFIG))
+
+GENERATED_DATA := $(shell yq -r '.acc_sample' $(CONFIG))
+
+RESULTS := $(shell yq -r '.results_r' $(CONFIG))
+
+
+# Phony Targets 
+
+.phony: all clean very-clean dist-clean
+
+all: $(TARGETS)
+
+clean:
+	rm -f $(TARGETS)
+	rm -f $(RESULTS)
+	rm -f $(GENERATED_DATA)
+
+very-clean: clean
+	rm -f $(WRDS_DATA)
+
+dist-clean: very-clean
+	rm secrets.env
+
+
+# Recipes for intermediate targets
+
+$(SECRETS):
+	@echo "To start, you need to copy _$(SECRETS) to $(SECRETS) and edit it"
+	@false
+
+$(WRDS_DATA): code/python/pull_wrds_data.py $(SECRETS) \
+	$(PULL_DATA_CFG) $(CONFIG)
+	$(PYTHON) $<
+
+$(GENERATED_DATA): code/python/prepare_data.py $(WRDS_DATA) $(CONFIG) \
+	$(EXTERNAL_DATA) $(PREPARE_DATA_CFG)
+	$(PYTHON) $<
+
+$(RESULTS):	$(GENERATED_DATA) code/R/do_analysis.R code/R/utils.R $(CONFIG)
+	$(RSCRIPT) code/R/do_analysis.R
+
+
+# Recipes for final targets
+
+$(PAPER): doc/paper_r.qmd doc/references.bib $(RESULTS)
+	quarto render doc/paper_r.qmd --quiet
+	mv output/paper_r.pdf $(PAPER)
+	rm -f doc/paper_r.ttt doc/paper_r.fff
+
+$(PRESENTATION): doc/presentation_r.qmd $(RESULTS) \
+	doc/beamer_theme_trr266.sty
+	quarto render doc/presentation_r.qmd --quiet
+	mv output/presentation_r.pdf $(PRESENTATION)
+	rm -rf output/presentation_r_files
+
+:::
+
+:::
+
+MAKEFILE_PYTHON
+
+# If you are new to Makefiles: https://makefiletutorial.com
+
+# Config
+
+PYTHON := python
+
+CONFIG := config/global_cfg.yaml
+
+PULL_WRDS_DATA_CFG := config/pull_wrds_data_cfg.yaml
+
+
+# Refer to `config/global_cfg.yaml` for file locations
+
+# Output Targets
+
+PAPER := $(shell yq -r '.output_paper' $(CONFIG))
+
+PRESENTATION :=  $(shell yq -r '.output_presentation' $(CONFIG))
+
+TARGETS :=  $(PAPER) $(PRESENTATION)
+
+
+# Input Targets
+
+SECRETS := $(shell yq -r '.secrets_file' $(CONFIG))
+
+EXTERNAL_DATA := $(shell yq -r '.fama_french_12' $(CONFIG)) \
+	$(shell yq -r '.fama_french_48' $(CONFIG))
+
+WRDS_DATA := $(shell yq -r '.cstat_us_parquet_file' $(CONFIG))
+
+GENERATED_DATA := $(shell yq -r '.acc_sample' $(CONFIG))
+
+RESULTS := $(shell yq -r '.results_python' $(CONFIG))
+
+
+# Phony Targets 
+
+.phony: all clean very-clean dist-clean
+
+all: $(TARGETS)
+
+clean:
+	rm -f $(TARGETS)
+	rm -f $(RESULTS)
+	rm -f $(GENERATED_DATA)
+
+very-clean: clean
+	rm -f $(WRDS_DATA)
+
+dist-clean: very-clean
+	rm $(SECRETS)
+
+
+# Recipes for intermediate targets
+
+$(WRDS_DATA): code/python/pull_wrds_data.py $(SECRETS) \
+	$(PULL_WRDS_DATA_CFG) $(CONFIG)
+	$(PYTHON) $<
+
+$(GENERATED_DATA): code/python/prepare_data.py $(WRDS_DATA) $(CONFIG) \
+	$(EXTERNAL_DATA) $(PREPARE_DATA_CFG)
+	$(PYTHON) $<
+
+$(RESULTS): code/python/do_analysis.py $(GENERATED_DATA) $(CONFIG) \
+	$(DO_ANALYSIS_CFG)
+	$(PYTHON) $<
+
+
+# Recipes for final targets
+
+$(PAPER): doc/paper_python.qmd doc/references.bib $(RESULTS)
+	quarto render doc/paper_python.qmd --quiet --execute
+	mv output/paper_python.pdf $(PAPER)
+	rm -f doc/paper_python.ttt doc/paper_python.fff
+
+$(PRESENTATION): doc/presentation_python.qmd $(RESULTS) \
+	doc/beamer_theme_trr266.sty
+	quarto render doc/presentation_python.qmd --quiet --execute
+	mv output/presentation_python.pdf $(PRESENTATION)
+	rm -rf output/presentation_python_files
+:::
+
+:::
+
+MAKEFILE_R
+
+# If you are new to Makefiles: https://makefiletutorial.com
+
+# Config
+
+RSCRIPT := Rscript --encoding=UTF-8
+
+CONFIG := config/global_cfg.yaml
+
+PULL_WRDS_DATA_CFG := config/pull_wrds_data_cfg.yaml
+
+
+# Refer to `config/global_cfg.yaml` for file locations
+
+# Output Targets
+
+PAPER := $(shell yq -r '.output_paper' $(CONFIG))
+
+PRESENTATION :=  $(shell yq -r '.output_presentation' $(CONFIG))
+
+TARGETS :=  $(PAPER) $(PRESENTATION)
+
+
+# Input Targets
+
+SECRETS := $(shell yq -r '.secrets_file' $(CONFIG))
+
+EXTERNAL_DATA := $(shell yq -r '.fama_french_12' $(CONFIG)) \
+	$(shell yq -r '.fama_french_48' $(CONFIG))
+
+WRDS_DATA := $(shell yq -r '.cstat_us_parquet_file' $(CONFIG))
+
+GENERATED_DATA := $(shell yq -r '.acc_sample' $(CONFIG))
+
+RESULTS := $(shell yq -r '.results_r' $(CONFIG))
+
+
+# Phony Targets 
+
+.phony: all clean very-clean dist-clean
+
+all: $(TARGETS)
+
+clean:
+	rm -f $(TARGETS)
+	rm -f $(RESULTS)
+	rm -f $(GENERATED_DATA)
+
+very-clean: clean
+	rm -f $(WRDS_DATA)
+
+dist-clean: very-clean
+	rm secrets.env
+
+
+# Recipes for intermediate targets
+
+$(SECRETS):
+	@echo "To start, you need to copy _$(SECRETS) to $(SECRETS) and edit it"
+	@false
+
+$(WRDS_DATA): code/R/pull_wrds_data.R code/R/utils.R $(SECRETS) \
+	$(PULL_WRDS_DATA_CFG)  $(CONFIG)
+	$(RSCRIPT) code/R/pull_wrds_data.R
+
+$(GENERATED_DATA): $(WRDS_DATA) $(EXTERNAL_DATA) \
+	code/R/prepare_data.R code/R/utils.R $(CONFIG)
+	$(RSCRIPT) code/R/prepare_data.R
+
+$(RESULTS):	$(GENERATED_DATA) code/R/do_analysis.R code/R/utils.R $(CONFIG)
+	$(RSCRIPT) code/R/do_analysis.R
+
+
+# Recipes for final targets
+
+$(PAPER): doc/paper_r.qmd doc/references.bib $(RESULTS)
+	quarto render doc/paper_r.qmd --quiet
+	mv output/paper_r.pdf $(PAPER)
+	rm -f doc/paper_r.ttt doc/paper_r.fff
+
+$(PRESENTATION): doc/presentation_r.qmd $(RESULTS) \
+	doc/beamer_theme_trr266.sty
+	quarto render doc/presentation_r.qmd --quiet
+	mv output/presentation_r.pdf $(PRESENTATION)
+	rm -rf output/presentation_r_files
+
+:::
+
+:::
+
+PYPROJECT.TOML
+
+[project]
+name = "treat"
+version = "0.0.0"
+description = "TRR 266 template for reproducible empirical accounting research"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.2.2",
+    "jupyter==1.0.0",
+    "plotnine==0.13.6",
+    "pyfixest>=0.30.2",
+    "Jinja2==3.1.4",
+    "PyYAML==6.0.1",
+    "python-dotenv==1.0.1",
+    "duckdb>=1.4.1",
+    "pyarrow==21.0.0",
+]
+
+:::
+
+:::
+
+PYTHON_DOCKERFILE
+
+FROM python:3.10
+
+WORKDIR /proj
+
+COPY ./requirements.txt /proj
+
+RUN apt-get update && apt-get -y upgrade \
+    && pip install -r requirements.txt
+
+RUN export QUARTO_VERSION="1.1.179" \
+    && mkdir -p /opt/quarto/${QUARTO_VERSION} \
+    && curl -o quarto.tar.gz -L \
+    "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz" \
+    && tar -zxvf quarto.tar.gz \
+    -C "/opt/quarto/${QUARTO_VERSION}" \
+    --strip-components=1 \
+    && rm quarto.tar.gz \
+    && ln -s /opt/quarto/${QUARTO_VERSION}/bin/quarto /usr/local/bin/quarto \
+    && quarto install tool tinytex \
+    && apt-get install -y ghostscript
+
+COPY . /proj/
+
+CMD [ "make", "L=python" ]
+:::
+
+:::
+
+README.MD
+
+# The TRR 266 Template for Reproducible Empirical Accounting Research
+
+
+This repository provides an infrastructure for open science oriented empirical projects. While it is targeted to the empirical accounting research crowd, it should appeal to every economist working with observational data. It features a toy project exploring discretionary accruals of U.S. public firms and requires access to U.S. Compustat data via WRDS.
+
+But even if you do not care about discretionary accruals (who wouldn’t? 😉) or do not have WRDS access, its code base should give you a feel on how the template is supposed to be used and how to structure a reproducible empirical project.
+
+## Design principles
+
+The treat repository showcases a programming language agnostic open science workflow that follows the following guiding principles:
+
+1.  Reproducibiliy
+2.  Interoperability
+3.  Simplicity
+
+**Reproducibility** implies that code generated based on this template should be able to be run by anyone, anywhere, at any time. This is achieved through the use of containerization (Docker) and workflow management (Make). The development container included in this template ensures that all necessary dependencies are installed. It can be run either locally (VSCode/Docker) or on GitHub Codespaces.
+
+**Interoperability** implies that different parts of the workflow can use different programming languages. This is achieved through the use of Make as a workflow manager, which can call scripts written in any language. The use of YAML configuration files facilitates sharing information between different parts of the workflow. Finally, the use of common data formats (CSV, Parquet) allows for cross-language data exchange. A common log file approach is used to track the progress of the workflow.
+
+**Simplicity** implies that code generated based on this template should be easy to understand and use. Researchers with limited programming experience should be able to use this template to create their own workflows. At times, simplicity conflicts with the two other principles. In these cases, reproducibility and interoperability are prioritized over simplicity. However, simplicity takes precedence over other potential principles such as efficiency, scalability, and elegance ;-)
+
+## Where do I start?
+
+To start, use this repository as a template to create a your own repository (See the ‘Use this template’ button on GitHub?).
+
+Then, you will have to take a decision. If you have a local development environment with Python and/or R installed, it might be tempting to use it as your development platform. However, to ensure that your work will be reproducible by others (or even yourself in the future), we would strongly encourage you to use this template in a development container.
+
+## LLM-friendly repo prompt
+
+If you want a quick, guided walkthrough or Q&A with your LLM of choice, see `info/repo_prompt.txt`. It contains a ready-to-use prompt plus a concatenated snapshot of the most important files in this repository. Paste it into your LLM and ask about the Makefile workflow, data pipeline, Quarto outputs, devcontainers, or how to adapt the template to your own project.
+
+## Using the template in a development container
+
+To use the template in a development container, you have (at least) two options:
+
+- Using GitHub Codespaces (zero local setup required): To set the repo up in a development container on GitHub Codespaces, go to the GitHub homepage of your new repository and click on “Code/Codespace/Start new Codespace on main”. See [here](https://github.com/features/codespaces) to learn more about GitHub Codespaces.
+- Using Visual Studio Code and Docker locally (Docker and VS Code need to be installed): You can open the repository in a container in VS Code by following [these instructions](https://code.visualstudio.com/docs/remote/containers-tutorial).
+
+## Using the template in your local development environment
+
+To run the code locally, you need to have Python, quarto and R installed. Also, you need to have several unix (`make`, `touch`, `cp`, `rm`, `rsync`, `yq`, …) commands available in your terminal. There are various ways to achieve this and given that you want to run the repo locally, you most likely will have a preference for one of those.
+
+This is the Session Info of the R environment that we are currently using in our develpopment container:
+
+``` r
+source("code/R/utils.R")
+sessionInfo()
+```
+
+    R version 4.5.1 (2025-06-13)
+    Platform: aarch64-unknown-linux-gnu
+    Running under: Ubuntu 24.04.2 LTS
+
+    Matrix products: default
+    BLAS:   /usr/lib/aarch64-linux-gnu/openblas-pthread/libblas.so.3 
+    LAPACK: /usr/lib/aarch64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+
+    locale:
+     [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+     [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+     [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+    [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+
+    time zone: UTC
+    tzcode source: system (glibc)
+
+    attached base packages:
+    [1] stats     graphics  grDevices utils     datasets  methods   base     
+
+    other attached packages:
+     [1] gt_1.1.0           fixest_0.13.2      modelsummary_2.5.0 arrow_21.0.0.1    
+     [5] duckdb_1.4.0       DBI_1.2.3          hms_1.1.3          lubridate_1.9.4   
+     [9] broom_1.0.10       modelr_0.1.11      purrr_1.1.0        ggplot2_4.0.0     
+    [13] tidyr_1.3.1        dplyr_1.1.4        readr_2.1.5        yaml_2.3.10       
+    [17] dotenv_1.0.3       glue_1.8.0         logger_0.4.1      
+
+    loaded via a namespace (and not attached):
+     [1] sandwich_3.1-1      generics_0.1.4      xml2_1.4.0         
+     [4] lattice_0.22-7      dreamerr_1.5.0      digest_0.6.37      
+     [7] magrittr_2.0.4      evaluate_1.0.5      grid_4.5.1         
+    [10] timechange_0.3.0    RColorBrewer_1.1-3  fastmap_1.2.0      
+    [13] jsonlite_2.0.0      backports_1.5.0     Formula_1.2-5      
+    [16] scales_1.4.0        stringmagic_1.2.0   numDeriv_2016.8-1.1
+    [19] cli_3.6.5           rlang_1.1.6         bit64_4.6.0-1      
+    [22] withr_3.0.2         tools_4.5.1         tzdb_0.5.0         
+    [25] assertthat_0.2.1    vctrs_0.6.5         R6_2.6.1           
+    [28] zoo_1.8-14          lifecycle_1.0.4     fs_1.6.6           
+    [31] bit_4.6.0           pkgconfig_2.0.3     pillar_1.11.1      
+    [34] gtable_0.3.6        Rcpp_1.1.0          data.table_1.17.8  
+    [37] xfun_0.53           tibble_3.3.0        tidyselect_1.2.1   
+    [40] knitr_1.50          farver_2.1.2        nlme_3.1-168       
+    [43] htmltools_0.5.8.1   tables_0.9.31       rmarkdown_2.30     
+    [46] compiler_4.5.1      S7_0.2.0           
+
+And this our current Python version:
+
+``` python
+import sys
+print(sys.version)
+```
+
+    3.12.3 (main, Aug 14 2025, 17:47:21) [GCC 13.3.0]
+
+You can find the list of required Python packages in the `requirements.txt` file. You can install them using `pip install -r requirements.txt` (see below).
+
+## Repository Content
+
+Browse around the repository and familiarize yourself with its folders. You will quickly see that there are several folders:
+
+- `config`: This directory holds configuration files that are being called by the code files in the `code` directory. We try to keep the configurations separate from the code to make it easier to adjust the workflow to your needs.
+
+- `code`: Here you will the find the R and Python code base. Both programming language folders contain all code necessary to run our showcase project. The files are being called to download data from WRDS, prepare the data, run the analysis and create the results for the output files (a paper and a presentation, both PDF files).
+
+- `data`: A directory where data is stored. You will see that it again contains sub-directories and a README file that explains their purpose. You will also see that in the `external` sub-directory there are two data files. Again, the README file explains their content.
+
+- `doc`: Here you will find Quarto files containing text and program instructions that will become our paper and presentation. Again, there is a Python and an R variant.
+
+- `info`: This is a folder that can store additional documentation. In our case you will find a RMarkdown file that introduces our TRR 266-themed ggplot theme.
+
+You also see an `output` directory but it is empty. Why? Because you will create the output by running the code in the repository, if you want. Read on to learn how.
+
+## How do I run the showcase code and create the output?
+
+Assuming that you have WRDS access to Compustat North America, this should be relatively straightforward.
+
+### Setting up the Python environment
+
+You have two options for setting up the Python environment:
+
+**Option A: Using pip (traditional approach)**
+
+1.  Create a virtual environment for the project. You can do this by running `python3 -m venv .venv` in the terminal. This will create a virtual environment in the `.venv` directory. You can activate the virtual environment by running `source .venv/bin/activate` on MacOS or Linux or `.\.venv\Scripts\activate` on Windows. You can deactivate the virtual environment by running `deactivate`.
+2.  With an active virtual environment, you can install the required packages by running `pip install -r requirements.txt` in the terminal. This will install the required Python packages for the project.
+
+**Option B: Using uv (faster alternative)**
+
+Instead of steps 1 and 2 above, you can simply run `uv sync` in the terminal. This single command will:
+- Install the Python version specified in `.python-version` (3.12.3)
+- Create a virtual environment automatically
+- Install all dependencies from `pyproject.toml`
+
+After running `uv sync`, you only need to activate the environment with `source .venv/bin/activate`.
+
+### Running the workflow
+
+3.  Copy the file `_secrets.env` to `secrets.env` in the project main directory. Edit it by adding your WRDS credentials.
+4.  Run `make all` via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R.
+5.  Eventually, you will be greeted with two files in the output directory: `treat_paper.pdf` and `treat_presentation.pdf`. Congratulations! You have successfully used an open science resource and reproduced our “analysis”. Now modify it and make it your own project!
+
+## OK. That was fun. Bot how should I use the repo now?
+
+The basic idea is to clone the repository whenever you start a new project. If you are using GitHub, the simplest way to do this is to click on “Use this Template” above the file list. Then delete everything that you don’t like and/or need. Over time, as you develop your own preferences, you can fork this repository and adjust it so that it becomes your very own template targeted to your very own preferences.
+
+## For TRR 266 Members: What else is in there for you?
+
+This repository contains three files that TRR members that use R might find particularly useful. The file `code/R/theme_trr.R` features a ggplot theme that makes it easy to generate visuals that comply to the TRR 266 style guide. The RMarkdown file in `info` takes you through the process. With the `doc/beamer_theme_trr266.sty` or `doc/beamer_theme_trr266_16x9.sty` latex macros you can beef up your Quarto based beamer presentations to our fancy TRR design. Finally, the R and Python code files that download WRDS data might be useful if you want to familiarize yourself with the process.
+
+## Why do you do abc in a certain way? I like to do things differently!
+
+Scientific workflows are a matter of preference and taste. What we present here is based on our design principles outlined above and on our experiences on what works well in the short run while generating long-term reproducible software pipelines. But this by no means implies that there are no other and better ways to do things. So, feel free to disagree and to build your own template. Or, even better: Convince us about your approach by submitting a pull request!
+
+## But there are other templates. Why yet another one?
+
+Of course there are and many of them are great. The reason why we decided to whip up our own is that we wanted a template that also includes some of the default style elements that we use in our collaborative research center [TRR 266 Accounting for Transparency](https://accounting-for-transparency.de). And we wanted to have a template that is centered on workflows that are typical in the accounting and finance domain. Here you go.
+
+## Licensing
+
+This repository is licensed to you under the MIT license, essentially meaning that you can do whatever you want with it as long as you give credit to us when you use substantial portions of it. What ‘substantial’ means is not trivial for a template. Here is our understanding. If you ‘only’ use the workflow, the structure and let’s say parts of the Makefile and/or the README sections that describe these aspects, we do not consider this as ‘substantial’ and you do not need to credit us. If, however, you decide to reuse a significant part of the example code, for example the code pulling data from WRDS, we think that giving credit would be appropriate.
+
+In any case, we would love to see you spreading the word by adding a statement like
+
+    This repository was built based on the ['treat' template for reproducible research](https://github.com/trr266/treat).
+
+to your README file. But this is not a legal requirement but a favor that we ask 😉.
+
+## References
+
+These are some very helpful texts discussing collaborative workflows for scientific computing:
+
+- Christensen, Freese and Miguel (2019): Transparent and Reproducible Social Science Research, Chapter 11, https://www.ucpress.edu/book/9780520296954/transparent-and-reproducible-social-science-research
+- Gentzkow and Shapiro (2014): Code and data for the social sciences: a practitioner’s guide, https://web.stanford.edu/~gentzkow/research/CodeAndData.pdf
+- Gow and Ding: Empirical Research in Accounting: Tools and Methods, Appendicies C to E, https://iangow.github.io/far_book/
+- Wilson, Bryan, Cranston, Kitzes, Nederbragt and Teal (2017): Good enough practices in scientific computing, PLOS Computational Biology 13(6): 1-20, https://doi.org/10.1371/journal.pcbi.1005510
+
+:::
+
+:::
+
+README.QMD
+
+---
+title: "The TRR 266 Template for Reproducible Empirical Accounting Research"
+format: gfm
+wrap: none
+---
+
+This repository provides an infrastructure for open science oriented empirical projects. While it is targeted to the empirical accounting research crowd, it should appeal to every economist working with observational data. It features a toy project exploring discretionary accruals of U.S. public firms and requires access to U.S. Compustat data via WRDS.
+
+But even if you do not care about discretionary accruals (who wouldn't? 😉) or do not have WRDS access, its code base should give you a feel on how the template is supposed to be used and how to structure a reproducible empirical project.
+
+
+## Design principles
+
+The treat repository showcases a programming language agnostic open science workflow that follows the following guiding principles:
+
+1. Reproducibiliy
+2. Interoperability
+3. Simplicity 
+
+
+**Reproducibility** implies that code generated based on this template should be able to be run by anyone, anywhere, at any time. This is achieved through the use of containerization (Docker) and workflow management (Make). The development container included in this template ensures that all necessary dependencies are installed. It can be run either locally (VSCode/Docker) or on GitHub Codespaces.
+
+**Interoperability** implies that different parts of the workflow can use different programming languages. This is achieved through the use of Make as a workflow manager, which can call scripts written in any language. The use of YAML configuration files facilitates sharing information between different parts of the workflow. Finally, the use of common data formats (CSV, Parquet) allows for cross-language data exchange. A common log file approach is used to track the progress of the workflow.
+
+**Simplicity** implies that code generated based on this template should be easy to understand and use. Researchers with limited programming experience should be able to use this template to create their own workflows. At times, simplicity conflicts with the two other principles. In these cases, reproducibility and interoperability are prioritized over simplicity. However, simplicity takes precedence over other potential principles such as efficiency, scalability, and elegance ;-)
+
+
+## Where do I start?
+
+To start, use this repository as a template to create a your own repository (See the 'Use this template' button on GitHub?). 
+
+Then, you will have to take a decision. If you have a local development environment with Python and/or R installed, it might be tempting to use it as your development platform. However, to ensure that your work will be reproducible by others (or even yourself in the future), we would strongly encourage you to use this template in a development container.
+
+
+## Using the template in a development container
+
+To use the template in a development container, you have (at least) two options:
+
+- Using GitHub Codespaces (zero local setup required): To set the repo up in a development container on GitHub Codespaces, go to the GitHub homepage of your new repository and click on "Code/Codespace/Start new Codespace on main". See [here](https://github.com/features/codespaces) to learn more about GitHub Codespaces.
+- Using Visual Studio Code and Docker locally (Docker and VS Code need to be installed): You can open the repository in a container in VS Code by following [these instructions](https://code.visualstudio.com/docs/remote/containers-tutorial).
+
+
+## Using the template in your local development environment
+
+To run the code locally, you need to have Python, quarto and R installed. Also, you need to have several unix (`make`, `touch`, `cp`, `rm`, `rsync`, `yq`, ...) commands available in your terminal. There are various ways to achieve this and given that you want to run the repo locally, you most likely will have a preference for one of those.
+
+This is the Session Info of the R environment that we are currently using in our develpopment container:
+
+```{r}
+source("code/R/utils.R")
+sessionInfo()
+```
+
+And this our current Python version:
+
+```{python, python.reticulate = FALSE}
+import sys
+print(sys.version)
+```
+
+You can find the list of required Python packages in the `requirements.txt` file. You can install them using `pip install -r requirements.txt` (see below). 
+
+
+## Repository Content
+
+Browse around the repository and familiarize yourself with its folders. You will quickly see that there are several folders:
+
+- `config`: This directory holds configuration files that are being called by the code files in the `code` directory. We try to keep the configurations separate from the code to make it easier to adjust the workflow to your needs.
+
+- `code`: Here you will the find the R and Python code base. Both programming language folders contain all code necessary to run our showcase project. The files are being called to download data from WRDS, prepare the data, run the analysis and create the results for the output files (a paper and a presentation, both PDF files).
+
+- `data`: A directory where data is stored. You will see that it again contains sub-directories and a README file that explains their purpose. You will also see that in the `external` sub-directory there are two data files. Again, the README file explains their content.
+
+- `doc`: Here you will find Quarto files containing text and program instructions that will become our paper and presentation. Again, there is a Python and an R variant.
+
+- `info`: This is a folder that can store additional documentation. In our case you will find a RMarkdown file that introduces our TRR 266-themed ggplot theme.
+
+You also see an `output` directory but it is empty. Why? Because you will create the output by running the code in the repository, if you want. Read on to learn how.
+
+
+## How do I run the showcase code and create the output?
+
+Assuming that you have WRDS access to Compustat North America, this should be relatively straightforward.
+
+1. Create a virtual environment for the project. You can do this by running `python3 -m venv .venv` in the terminal. This will create a virtual environment in the `.venv` directory. You can activate the virtual environment by running `source .venv/bin/activate` on MacOS or Linux or `.\.venv\Scripts\activate` on Windows. You can deactivate the virtual environment by running `deactivate`.
+2. With an active virtual environment, you can install the required packages by running `pip install -r requirements.txt` in the terminal. This will install the required Python packages for the project.
+3. Copy the file `_secrets.env` to `secrets.env` in the project main directory. Edit it by adding your WRDS credentials.
+4. Run `make all` via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R.
+5. Eventually, you will be greeted with two files in the output directory: `treat_paper.pdf` and `treat_presentation.pdf`. Congratulations! You have successfully used an open science resource and reproduced our "analysis". Now modify it and make it your own project!
+
+
+## OK. That was fun. Bot how should I use the repo now?
+
+The basic idea is to clone the repository whenever you start a new project. If you are using GitHub, the simplest way to do this is to click on "Use this Template" above the file list. Then delete everything that you don't like and/or need. Over time, as you develop your own preferences, you can fork this repository and adjust it so that it becomes your very own template targeted to your very own preferences.
+
+
+## For TRR 266 Members: What else is in there for you?
+
+This repository contains three files that TRR members that use R might find particularly useful. The file `code/R/theme_trr.R` features a ggplot theme that makes it easy to generate visuals that comply to the TRR 266 style guide. The RMarkdown file in `info` takes you through the process. With the `doc/beamer_theme_trr266.sty` or `doc/beamer_theme_trr266_16x9.sty` latex macros you can beef up your Quarto based beamer presentations to our fancy TRR design. Finally, the R and Python code files that download WRDS data might be useful if you want to familiarize yourself with the process.
+
+
+## Why do you do abc in a certain way? I like to do things differently!
+
+Scientific workflows are a matter of preference and taste. What we present here is based on our design principles outlined above and on our experiences on what works well in the short run while generating long-term reproducible software pipelines. But this by no means implies that there are no other and better ways to do things. So, feel free to disagree and to build your own template. Or, even better: Convince us about your approach by submitting a pull request!
+
+
+## But there are other templates. Why yet another one?
+
+Of course there are and many of them are great. The reason why we decided to whip up our own is that we wanted a template that also includes some of the default style elements that we use in our collaborative research center [TRR 266 Accounting for Transparency](https://accounting-for-transparency.de). And we wanted to have a template that is centered on workflows that are typical in the accounting and finance domain. Here you go.
+
+
+## Licensing
+
+This repository is licensed to you under the MIT license, essentially meaning that you can do whatever you want with it as long as you give credit to us when you use substantial portions of it. What 'substantial' means is not trivial for a template. Here is our understanding. If you 'only' use the workflow, the structure and let's say parts of the Makefile and/or the README sections that describe these aspects, we do not consider this as 'substantial' and you do not need to credit us. If, however, you decide to reuse a significant part of the example code, for example the code pulling data from WRDS, we think that giving credit would be appropriate.
+
+In any case, we would love to see you spreading the word by adding a statement like 
+
+```
+This repository was built based on the ['treat' template for reproducible research](https://github.com/trr266/treat).
+```
+
+to your README file. But this is not a legal requirement but a favor that we ask 😉.
+
+
+## References
+
+These are some very helpful texts discussing collaborative workflows for scientific computing:
+
+- Christensen, Freese and Miguel (2019): Transparent and Reproducible Social Science Research, Chapter 11, https://www.ucpress.edu/book/9780520296954/transparent-and-reproducible-social-science-research
+- Gentzkow and Shapiro (2014): Code and data for the social sciences:
+a practitioner’s guide, https://web.stanford.edu/~gentzkow/research/CodeAndData.pdf
+- Gow and Ding: Empirical Research in Accounting: Tools and Methods, Appendicies C to E, https://iangow.github.io/far_book/
+- Wilson, Bryan, Cranston, Kitzes, Nederbragt and Teal (2017): Good enough practices in scientific computing, PLOS Computational Biology 13(6): 1-20, https://doi.org/10.1371/journal.pcbi.1005510
+
+
+
+:::
+
+:::
+
+_SECRETS.ENV
+
+# Configuration of passwords, key, etc.
+# Copy to secrets.env and edit
+# ___ DO NOT COMMIT 'secrets.env' ___
+
+WRDS_USERNAME=****
+WRDS_PASSWORD=****
+:::
+
+</REPO_TEXT>

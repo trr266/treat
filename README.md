@@ -25,6 +25,10 @@ To start, use this repository as a template to create a your own repository (See
 
 Then, you will have to take a decision. If you have a local development environment with Python and/or R installed, it might be tempting to use it as your development platform. However, to ensure that your work will be reproducible by others (or even yourself in the future), we would strongly encourage you to use this template in a development container.
 
+## LLM-friendly repo prompt
+
+If you want a quick, guided walkthrough or Q&A with your LLM of choice, see `info/LLM_ASSISTANT_SPEC.txt`. It contains a ready-to-use prompt plus a concatenated snapshot of the most important files in this repository. Paste it into your LLM and ask about the Makefile workflow, data pipeline, Quarto outputs, devcontainers, or how to adapt the template to your own project.
+
 ## Using the template in a development container
 
 To use the template in a development container, you have (at least) two options:
