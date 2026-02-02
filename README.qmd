@@ -9,60 +9,95 @@ This repository provides an infrastructure for open science oriented empirical p
 But even if you do not care about discretionary accruals (who wouldn't? 😉) or do not have WRDS access, its code base should give you a feel on how the template is supposed to be used and how to structure a reproducible empirical project.
 
 
-## Design principles
-
-The treat repository showcases a programming language agnostic open science workflow that follows the following guiding principles:
-
-1. Reproducibiliy
-2. Interoperability
-3. Simplicity 
-
-
-**Reproducibility** implies that code generated based on this template should be able to be run by anyone, anywhere, at any time. This is achieved through the use of containerization (Docker) and workflow management (Make). The development container included in this template ensures that all necessary dependencies are installed. It can be run either locally (VSCode/Docker) or on GitHub Codespaces.
-
-**Interoperability** implies that different parts of the workflow can use different programming languages. This is achieved through the use of Make as a workflow manager, which can call scripts written in any language. The use of YAML configuration files facilitates sharing information between different parts of the workflow. Finally, the use of common data formats (CSV, Parquet) allows for cross-language data exchange. A common log file approach is used to track the progress of the workflow.
-
-**Simplicity** implies that code generated based on this template should be easy to understand and use. Researchers with limited programming experience should be able to use this template to create their own workflows. At times, simplicity conflicts with the two other principles. In these cases, reproducibility and interoperability are prioritized over simplicity. However, simplicity takes precedence over other potential principles such as efficiency, scalability, and elegance ;-)
-
-
 ## Where do I start?
 
-To start, use this repository as a template to create a your own repository (See the 'Use this template' button on GitHub?). 
+The easiest way to use this repository is to treat it as a starting point for your own project.
 
-Then, you will have to take a decision. If you have a local development environment with Python and/or R installed, it might be tempting to use it as your development platform. However, to ensure that your work will be reproducible by others (or even yourself in the future), we would strongly encourage you to use this template in a development container.
+First, go to the GitHub page of this repository and click **Use this template** to create a new repository under your account (or your organization). Give it a name, create it, and then switch over to working in *that new repo* (not in `trr266/treat` itself).
 
-## LLM-friendly repo prompt
+From there, you basically have three ways to get into a “ready-to-run” setup where R, Python, Quarto, LaTeX, and the necessary system libraries are already consistent across machines:
 
-If you want a quick, guided walkthrough or Q&A with your LLM of choice, see `info/LLM_ASSISTANT_SPEC.txt`. It contains a ready-to-use prompt plus a concatenated snapshot of the most important files in this repository. Paste it into your LLM and ask about the Makefile workflow, data pipeline, Quarto outputs, devcontainers, or how to adapt the template to your own project.
+* **Using GitHub Codespaces (zero local setup required):** Go to the GitHub homepage of your new repository and click on “Code/Codespace/Start new Codespace on main”. See [here](https://github.com/features/codespaces) to learn more about GitHub Codespaces.
+* **VS Code + Docker (local, but containerized):** If you work locally, install Docker and VS Code (with the Dev Containers extension). Then clone your new repository, open it in VS Code, and choose `Dev Containers: Reopen in Container` from the Command Palette.. You can learn more about dev containers from [this tutorial](https://code.visualstudio.com/docs/remote/containers-tutorial).
+* **Custom local setup (no containerization):** If you’d rather run everything directly on your machine without containerization, you *can* do that too — it just means you’ll need to install all dependencies manually. More on that later. 
+
+If everything works, the following commands should print out the versions of R, Python, Quarto, and Make that are installed in your environment:
+
+```{bash}
+#| eval: true
 
 
-## Using the template in a development container
+R --version
+```
+```{bash}
+#| eval: true
 
-To use the template in a development container, you have (at least) two options:
+python --version
+```
+```{bash}
+#| eval: true
 
-- Using GitHub Codespaces (zero local setup required): To set the repo up in a development container on GitHub Codespaces, go to the GitHub homepage of your new repository and click on "Code/Codespace/Start new Codespace on main". See [here](https://github.com/features/codespaces) to learn more about GitHub Codespaces.
-- Using Visual Studio Code and Docker locally (Docker and VS Code need to be installed): You can open the repository in a container in VS Code by following [these instructions](https://code.visualstudio.com/docs/remote/containers-tutorial).
+quarto --version
+```
+```{bash}
+#| eval: true
 
-
-## Using the template in your local development environment
-
-To run the code locally, you need to have Python, quarto and R installed. Also, you need to have several unix (`make`, `touch`, `cp`, `rm`, `rsync`, `yq`, ...) commands available in your terminal. There are various ways to achieve this and given that you want to run the repo locally, you most likely will have a preference for one of those.
-
-This is the Session Info of the R environment that we are currently using in our develpopment container:
-
-```{r}
-source("code/R/utils.R")
-sessionInfo()
+make --version
 ```
 
-And this our current Python version:
+## How do I run the showcase and create the output?
 
-```{python, python.reticulate = FALSE}
-import sys
-print(sys.version)
+Once you have setup the environment, and assuming that you have WRDS access to Compustat North America, this should be relatively straightforward.
+
+### 1) Add your WRDS credentials
+
+This project expects your WRDS login credentials in a local secrets file.
+
+Copy the template file:
+
+```bash
+cp _secrets.env secrets.env
 ```
 
-You can find the list of required Python packages in the `requirements.txt` file. You can install them using `pip install -r requirements.txt` (see below). 
+Open `secrets.env` and replace the placeholders:
+
+```text
+WRDS_USERNAME=...
+WRDS_PASSWORD=...
+```
+
+That file is intentionally ignored by Git — it should stay local.
+
+### 2) Run the workflow
+
+From the repository root, just run:
+
+```bash
+make
+```
+
+That’s it. The Makefile will take care of pulling the data (via WRDS), preparing the sample, running the analysis, and rendering the paper and presentation.
+
+When it finishes, you should find:
+
+* `output/treat_paper.pdf`
+* `output/treat_presentation.pdf`
+
+### 3) Want only Python or only R?
+
+By default, `make` runs the mixed-language workflow. If you’d rather stick to one language pipeline, you can run:
+
+```bash
+make -f Makefile_python
+```
+
+or:
+
+```bash
+make -f Makefile_R
+```
+
+Everything else stays the same.
 
 
 ## Repository Content
@@ -82,36 +117,64 @@ Browse around the repository and familiarize yourself with its folders. You will
 You also see an `output` directory but it is empty. Why? Because you will create the output by running the code in the repository, if you want. Read on to learn how.
 
 
-## How do I run the showcase code and create the output?
+## Design principles
 
-Assuming that you have WRDS access to Compustat North America, this should be relatively straightforward.
+The treat repository showcases a programming language agnostic open science workflow that follows the following guiding principles:
 
-### Setting up the Python environment
-
-You have two options for setting up the Python environment:
-
-**Option A: Using pip (traditional approach)**
-
-1.  Create a virtual environment for the project. You can do this by running `python3 -m venv .venv` in the terminal. This will create a virtual environment in the `.venv` directory. You can activate the virtual environment by running `source .venv/bin/activate` on MacOS or Linux or `.\.venv\Scripts\activate` on Windows. You can deactivate the virtual environment by running `deactivate`.
-2.  With an active virtual environment, you can install the required packages by running `pip install -r requirements.txt` in the terminal. This will install the required Python packages for the project.
-
-**Option B: Using uv (faster alternative)**
-
-Instead of steps 1 and 2 above, you can simply run `uv sync` in the terminal. This single command will:
-- Install the Python version specified in `.python-version` (3.12.3)
-- Create a virtual environment automatically
-- Install all dependencies from `pyproject.toml`
-
-After running `uv sync`, you only need to activate the environment with `source .venv/bin/activate`.
-
-### Running the workflow
-
-3.  Copy the file `_secrets.env` to `secrets.env` in the project main directory. Edit it by adding your WRDS credentials.
-4.  Run `make all` via the terminal. This will partly use the R code and the Python code to demonstrate the mixed programming workflow. Alternatively, you can also run `make all -f Makefile_python` to only use the Python code base or run `make all -f Makefile_R` to build only based on R.
-5.  Eventually, you will be greeted with two files in the output directory: `treat_paper.pdf` and `treat_presentation.pdf`. Congratulations! You have successfully used an open science resource and reproduced our "analysis". Now modify it and make it your own project!
+1. Reproducibility
+2. Interoperability
+3. Simplicity
 
 
-## OK. That was fun. Bot how should I use the repo now?
+**Reproducibility** implies that code generated based on this template should be able to be run by anyone, anywhere, at any time. This is achieved through the use of containerization (Docker) and workflow management (Make). The development container included in this template ensures that all necessary dependencies are installed. It can be run either locally (VSCode/Docker) or on GitHub Codespaces.
+
+**Interoperability** implies that different parts of the workflow can use different programming languages. This is achieved through the use of Make as a workflow manager, which can call scripts written in any language. The use of YAML configuration files facilitates sharing information between different parts of the workflow. Finally, the use of common data formats (CSV, Parquet) allows for cross-language data exchange. A common log file approach is used to track the progress of the workflow.
+
+**Simplicity** implies that code generated based on this template should be easy to understand and use. Researchers with limited programming experience should be able to use this template to create their own workflows. At times, simplicity conflicts with the two other principles. In these cases, reproducibility and interoperability are prioritized over simplicity. However, simplicity takes precedence over other potential principles such as efficiency, scalability, and elegance ;-)
+
+
+---
+
+## LLM-friendly repo prompt
+
+If you want a quick, guided walkthrough or Q&A with your LLM of choice, see `info/LLM_ASSISTANT_SPEC.txt`. It contains a ready-to-use prompt plus a concatenated snapshot of the most important files in this repository. Paste it into your LLM and ask about the Makefile workflow, data pipeline, Quarto outputs, devcontainers, or how to adapt the template to your own project.
+
+
+
+
+## Running outside the dev environment
+
+To run the code locally outside of the development container, you need to have Python, quarto and R installed. Also, you need to have several unix (`make`, `touch`, `cp`, `rm`, `rsync`, `yq`, ...) commands available in your terminal. There are various ways to achieve this and given that you want to run the repo locally, you most likely will have a preference for one of those.
+
+This is the Session Info of the R environment that we are currently using in our development container:
+
+```{r}
+source("code/R/utils.R")
+sessionInfo()
+```
+
+And this our current Python version:
+
+```{python, python.reticulate = FALSE}
+import sys
+print(sys.version)
+```
+
+
+### Python dependencies
+
+This repository is set up for dependency management via `pyproject.toml`.
+
+If you use `uv`:
+
+```bash
+uv sync
+source .venv/bin/activate
+```
+
+If you use `pip`, create and activate a venv and install dependencies from the project metadata as you prefer.
+
+## OK. That was fun. But how should I use the repo now?
 
 The basic idea is to clone the repository whenever you start a new project. If you are using GitHub, the simplest way to do this is to click on "Use this Template" above the file list. Then delete everything that you don't like and/or need. Over time, as you develop your own preferences, you can fork this repository and adjust it so that it becomes your very own template targeted to your very own preferences.
 
@@ -153,5 +216,3 @@ These are some very helpful texts discussing collaborative workflows for scienti
 a practitioner’s guide, https://web.stanford.edu/~gentzkow/research/CodeAndData.pdf
 - Gow and Ding: Empirical Research in Accounting: Tools and Methods, Appendicies C to E, https://iangow.github.io/far_book/
 - Wilson, Bryan, Cranston, Kitzes, Nederbragt and Teal (2017): Good enough practices in scientific computing, PLOS Computational Biology 13(6): 1-20, https://doi.org/10.1371/journal.pcbi.1005510
-
-

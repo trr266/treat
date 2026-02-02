@@ -61,6 +61,7 @@ RUN set -eux; \
     "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ}"; \
   chmod +x /usr/local/bin/yq
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && ln -sf /root/.local/bin/uv /usr/local/bin/uv
 
 CMD ["/bin/sh"]

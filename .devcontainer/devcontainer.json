@@ -1,29 +1,57 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/rocker-org/devcontainer-templates/tree/main/src/r-ver
 {
-	"name": "eval_tutorlain_rver_4.5",
-	"build": { 
-		"dockerfile": "Dockerfile"
-	},
-	"hostRequirements": {
-		"cpus": 4,
-		"memory": "16gb",
-		"storage": "32gb"
-	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"REditorSupport.r",
-				"RDebugger.r-debugger",
-				"quarto.quarto",
-				"ms-python.vscode-pylance",
-				"ms-python.python",
-				"ms-python.debugpy",
-				"mathematic.vscode-pdf",
-				"george-alisson.html-preview-vscode",
-				"mechatroner.rainbow-csv",
-				"ms-azuretools.vscode-docker"
-			]
-		}
-	}
+  "name": "treat",
+  "build": { "dockerfile": "Dockerfile" },
+
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "32gb"
+  },
+
+  // mask host .venv with an anonymous volume inside the workspace (compose style)
+  "mounts": [
+    "type=volume,target=${containerWorkspaceFolder}/.venv",
+    "type=volume,target=/root/.cache/uv"
+  ],
+
+  // Only put UV_PROJECT_ENVIRONMENT here (used by postCreateCommand).
+  // DO NOT touch PATH here.
+  "containerEnv": {
+    "UV_PROJECT_ENVIRONMENT": "${containerWorkspaceFolder}/.venv"
+  },
+
+  // This is where PATH extension works reliably.
+  "remoteEnv": {
+    "UV_PROJECT_ENVIRONMENT": "${containerWorkspaceFolder}/.venv",
+    "VIRTUAL_ENV": "${containerWorkspaceFolder}/.venv",
+    "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
+  },
+
+  "postCreateCommand": "bash -lc 'cd ${containerWorkspaceFolder} && uv sync'",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "REditorSupport.r",
+        "RDebugger.r-debugger",
+        "quarto.quarto",
+        "ms-python.vscode-pylance",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "mathematic.vscode-pdf",
+        "george-alisson.html-preview-vscode",
+        "mechatroner.rainbow-csv",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.analysis.extraPaths": [
+          "${containerWorkspaceFolder}/code/python"
+        ]
+      }
+    }
+  }
 }
